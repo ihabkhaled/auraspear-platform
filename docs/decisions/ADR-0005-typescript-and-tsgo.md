@@ -20,15 +20,18 @@ trusted `tsc` gate or weakening any tsconfig.
 
 ## Result (measured 2026-06-20, tsgo 7.0.0-dev)
 
-| Project           | `tsc` | `tsgo` | Blocker                                                                              |
-| ----------------- | ----- | ------ | ------------------------------------------------------------------------------------ |
-| `packages/shared` | ✅    | ✅     | —                                                                                    |
-| `packages/ai`     | ✅    | ✅     | —                                                                                    |
-| `apps/api`        | ✅    | ❌     | `TS5102` (tsgo removed `baseUrl`) + `TS5090` (non-relative paths) in `tsconfig.json` |
-| `apps/web`        | ✅    | ❌     | `TS2882` cannot resolve the side-effect import `./globals.css`                       |
+| Project           | `tsc` | `tsgo` | Blocker                                                                                                                                    |
+| ----------------- | ----- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `packages/shared` | ✅    | ✅     | —                                                                                                                                          |
+| `packages/ai`     | ✅    | ✅     | —                                                                                                                                          |
+| `apps/api`        | ✅    | ⚠️     | path issue FIXED (relative `paths`, no `baseUrl`); remaining tsgo-only gap: `@types/jest` globals not auto-loaded for in-`src` `*.spec.ts` |
+| `apps/web`        | ✅    | ✅     | FIXED via an ambient `declare module '*.css'` (`apps/web/src/css-modules.d.ts`)                                                            |
 
-So tsgo already works for the dependency-free packages but is **not yet ready
-for the apps** (NestJS `baseUrl`/path style and Next.js CSS side-effect imports).
+**Update (after non-weakening fixes):** tsgo is now green for the web app and
+both packages. The api's `tsconfig.json` was changed to relative `paths`
+(`"@/*": ["./src/*"]`) with no `baseUrl` — valid for **both** tsc and tsgo; the
+only remaining tsgo gap is `jest` globals in co-located spec files (test code,
+not production). No tsconfig was weakened — strict flags are unchanged.
 
 ## Consequences
 

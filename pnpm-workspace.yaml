@@ -8,6 +8,14 @@ packages:
 # upgrade milestone, so this override does NOT touch it.
 overrides:
   zod@4: 4.4.3
+  # Security: force transitive deps to their patched releases (see
+  # docs/audit/vulnerability-remediation.md). These are mostly dev/test tooling.
+  multer: '>=2.2.0'
+  esbuild: '>=0.28.1'
+  vite: '>=6.4.3'
+  postcss: '>=8.5.10'
+  js-yaml: '>=4.1.2'
+  '@hono/node-server': '>=1.19.13'
 
 # @hookform/resolvers@5 dropped `zod` from its peerDependencies (it consumes
 # Standard Schema). Under pnpm's isolated node_modules that leaves the

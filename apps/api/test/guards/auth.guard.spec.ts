@@ -31,16 +31,7 @@ describe('AuthGuard', () => {
       validateMembershipActive: jest.fn(),
     }
 
-    const prismaService = {
-      tenant: {
-        findUnique: jest.fn(),
-      },
-      tenantMembership: {
-        findUnique: jest.fn(),
-      },
-    }
-
-    guard = new AuthGuard(reflector, authService as never, prismaService as never)
+    guard = new AuthGuard(reflector, authService as never)
   })
 
   it('should allow public routes', async () => {

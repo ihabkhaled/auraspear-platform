@@ -12,6 +12,13 @@ export const URL_KEYS = new Set([
 ])
 
 /**
+ * Canonical hostname for Google's Gemini (generative language) API.
+ * Used to detect Gemini endpoints by parsed URL hostname rather than by
+ * substring matching, which is bypassable (e.g. `https://evil.com/?x=gemini`).
+ */
+export const GEMINI_API_HOSTNAME = 'generativelanguage.googleapis.com'
+
+/**
  * Maximum length for extracted remote error messages.
  * Prevents oversized third-party responses from bloating logs or API responses.
  */

@@ -35,10 +35,12 @@ export class SemanticSearchService {
     limit = 25
   ): Promise<SearchResult[]> {
     const results: SearchResult[] = []
-    const pattern = `%${query}%`
     const perModule = Math.max(5, Math.ceil(limit / 6))
 
-    const searchModules = modules && modules.length > 0 ? modules : ['findings', 'chatThreads', 'memories', 'alerts', 'cases', 'incidents']
+    const searchModules =
+      modules && modules.length > 0
+        ? modules
+        : ['findings', 'chatThreads', 'memories', 'alerts', 'cases', 'incidents']
 
     const searches: Promise<void>[] = []
 
