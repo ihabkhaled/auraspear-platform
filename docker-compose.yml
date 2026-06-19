@@ -1,0 +1,7 @@
+# Root entrypoint for `docker compose` run from the repo root.
+# The canonical definitions live in infra/docker/. This includes the base
+# stack so `docker compose up` works from the root; use the pnpm scripts
+# (`pnpm docker:dev` / `pnpm docker:prod` / `pnpm docker:infra`) to layer the
+# dev/prod overlays.
+include:
+  - infra/docker/docker-compose.yml

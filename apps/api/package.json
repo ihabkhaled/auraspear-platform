@@ -35,17 +35,6 @@
     "prisma:migrate:prod": "npm run prisma:migrate:resolve && prisma migrate deploy",
     "prisma:seed": "prisma db seed",
     "prisma:studio": "prisma studio",
-    "docker:infra": "docker compose -f docker-compose.infra.yml up -d",
-    "docker:infra:down": "docker compose -f docker-compose.infra.yml down",
-    "docker:dev": "docker compose -f docker-compose.dev.yml up -d --build",
-    "docker:dev:down": "docker compose -f docker-compose.dev.yml down",
-    "docker:prod": "docker compose -f docker-compose.prod.yml up -d --build",
-    "docker:prod:down": "docker compose -f docker-compose.prod.yml down",
-    "docker:connectors": "docker compose -f docker-compose.connectors.yml up -d",
-    "docker:connectors:down": "docker compose -f docker-compose.connectors.yml down",
-    "docker:connectors:logs": "docker compose -f docker-compose.connectors.yml logs -f",
-    "docker:all": "docker compose -f docker-compose.dev.yml -f docker-compose.connectors.yml up -d",
-    "docker:all:down": "docker compose -f docker-compose.dev.yml -f docker-compose.connectors.yml down",
     "postinstall": "prisma generate"
   },
   "dependencies": {

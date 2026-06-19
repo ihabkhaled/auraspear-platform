@@ -1,0 +1,22 @@
+# Build context is the repo ROOT. Keep it small and never ship secrets.
+**/node_modules
+**/.next
+**/dist
+**/.turbo
+**/coverage
+**/test-results
+**/playwright-report
+**/eslint-reports
+.git
+.github
+**/.husky
+# Never send real env files into an image layer
+**/.env
+**/.env.*
+!**/.env.example
+!**/.env.*.example
+# Docs / editor noise
+**/*.md
+**/.vscode
+**/.idea
+**/.DS_Store

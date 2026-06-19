@@ -1,0 +1,41 @@
+# =============================================================================
+# PROD overlay — layer on top of docker-compose.yml
+#   docker compose -f infra/docker/docker-compose.yml \
+#                  -f infra/docker/docker-compose.prod.yml up -d --build
+# (use `pnpm docker:prod`)
+#
+# Hardening: Postgres/Redis stay internal (no host ports — inherited from base);
+# Redis requires a password; only web + api are reachable from the host.
+# =============================================================================
+name: auraspear
+
+services:
+  redis:
+    command:
+      [
+        'redis-server',
+        '--requirepass',
+        '${REDIS_PASSWORD:?REDIS_PASSWORD is required in production}',
+        '--save',
+        '60',
+        '1',
+        '--loglevel',
+        'warning',
+      ]
+    healthcheck:
+      test: ['CMD-SHELL', 'redis-cli -a "$$REDIS_PASSWORD" ping | grep -q PONG']
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+
+  api:
+    restart: always
+    environment:
+      NODE_ENV: production
+      LOG_LEVEL: info
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+
+  web:
+    restart: always
+    environment:
+      NODE_ENV: production
+      NEXT_PUBLIC_APP_ENV: production
