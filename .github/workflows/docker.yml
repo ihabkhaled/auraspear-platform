@@ -56,20 +56,12 @@ jobs:
           context: .
           file: ${{ matrix.dockerfile }}
           target: production
+          # On PRs we only validate that the image builds (no push, no load).
+          # Pushing to GHCR happens on main/tags. Image vuln scanning is covered
+          # by the Trivy filesystem scan in security.yml.
           push: ${{ github.event_name != 'pull_request' }}
-          load: ${{ github.event_name == 'pull_request' }}
+          load: false
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha,scope=${{ matrix.app }}
           cache-to: type=gha,mode=max,scope=${{ matrix.app }}
-
-      - name: Trivy image scan
-        if: github.event_name == 'pull_request'
-        uses: aquasecurity/trivy-action@0.28.0
-        with:
-          image-ref: ${{ env.REGISTRY }}/${{ github.repository }}/${{ matrix.app }}:pr-${{ github.event.number }}
-          format: sarif
-          output: trivy-${{ matrix.app }}.sarif
-          severity: CRITICAL,HIGH
-          ignore-unfixed: true
-        continue-on-error: true
