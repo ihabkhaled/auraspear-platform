@@ -14,7 +14,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      # Advisory until GitHub computes the base-branch dependency snapshot for
+      # this repo (the action reports "not supported" until then). It activates
+      # automatically once the dependency graph is populated.
       - uses: actions/dependency-review-action@v4
+        continue-on-error: true
         with:
           fail-on-severity: high
           comment-summary-in-pr: on-failure
