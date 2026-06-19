@@ -29,13 +29,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      # Use the official installer action (the scan action's template setup and
-      # the piped install.sh were both flaky in CI). A real scan that reports
+      # Direct release-binary download (the marketplace actions/install.sh kept
+      # trying a non-existent version and were flaky). A real scan that reports
       # findings without failing the build (--exit-code 0); node_modules skipped.
       - name: Install Trivy
-        uses: aquasecurity/setup-trivy@81e514348e19b6112ce2a7e3ecbafe19c1e1f567 # v0.3.1
-        with:
-          version: v0.65.0
+        run: |
+          VER=0.71.2
+          curl -sfL "https://github.com/aquasecurity/trivy/releases/download/v${VER}/trivy_${VER}_Linux-64bit.tar.gz" -o /tmp/trivy.tar.gz
+          sudo tar -xzf /tmp/trivy.tar.gz -C /usr/local/bin trivy
+          trivy --version
       - name: Trivy filesystem scan (vuln + secret + misconfig)
         run: |
           trivy fs \
