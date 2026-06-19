@@ -24,6 +24,13 @@
     "typecheck": {
       "dependsOn": ["^build"]
     },
+    "typecheck:ci": {
+      "dependsOn": ["^build"]
+    },
+    "typecheck:fast": {
+      "dependsOn": ["^build"],
+      "cache": false
+    },
     "test": {
       "dependsOn": ["^build"],
       "outputs": ["coverage/**"]

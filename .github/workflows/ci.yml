@@ -50,10 +50,10 @@ jobs:
       # Runs and annotates, but does not fail the check.
       - name: ESLint (advisory)
         continue-on-error: true
-        run: pnpm lint
+        run: pnpm lint || true
       - name: Prettier check (advisory)
         continue-on-error: true
-        run: pnpm format:check
+        run: pnpm format:check || true
 
   test:
     name: test (advisory)
