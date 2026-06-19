@@ -1,0 +1,114 @@
+---
+description: AuraSpear monorepo map — where frontend/backend/shared/AI code lives, the command map, and the mandatory loading order. Read AGENTS.md first.
+globs:
+alwaysApply: true
+---
+
+# 00 — Project Map (read this, then read AGENTS.md)
+
+**Before editing anything, read `AGENTS.md` at the repo root.** It is the single
+AI entry point; every other rule file inherits from it. The one rule there is
+absolute: **no agent edits first and understands later.**
+
+AuraSpear is an **AI-first, multi-tenant SOC platform** (SIEM alerts, cases,
+hunts, intel, SOAR, AI investigation). Architecture is **BFF**: the Next.js web
+app never calls Wazuh/OpenSearch/MISP/Bedrock directly — it proxies through the
+NestJS API.
+
+## Loading order (do not skip)
+
+Follow the exact order in `AGENTS.md` §1, then edit:
+
+1. `AGENTS.md` (root)
+2. `memory/PROJECT_MEMORY.md` (+ other `memory/*.md` for stable truths)
+3. relevant `context/*.md` for your area
+4. relevant `rules/**` (hard constraints — load `rules/global/` always)
+5. relevant `skills/**` (step-by-step recipe for the task)
+6. relevant `docs/**` + existing code and tests
+7. **then** edit
+
+App-specific deep rules live in `apps/web/CLAUDE.md` (frontend, ~60 rules) and
+`apps/api/CLAUDE.md` (backend, ~100 rules). Read the one for the app you touch.
+
+## Where code lives
+
+| Area | Path | Package / stack |
+| --- | --- | --- |
+| Frontend | `apps/web/src` | `@auraspear/web` — Next.js 16, React 19, Tailwind 4 |
+| Backend (BFF) | `apps/api/src` | `@auraspear/api` — NestJS 11, Prisma 7, Postgres, Redis |
+| Database | `apps/api/prisma` | `schema.prisma`, `migrations/`, seed |
+| Shared contracts | `packages/shared/src` | `@auraspear/shared` (scaffolded) |
+| AI foundations | `packages/ai/src` | `@auraspear/ai` — `safety.ts`, `redaction.ts` (`redact()`), `model-router.ts`, `evaluators.ts`, `prompts.ts`, `types.ts` |
+| Shared tooling | `packages/config` | `@auraspear/config` |
+| Docker / compose | `infra/docker/` | base + dev/prod/infra compose |
+| Scripts | `scripts/install/`, `scripts/ci/` | `doctor`, `setup-env`, CI helpers |
+| Docs | `docs/` | index in `docs/DOCS_INDEX.md` |
+
+**Frontend structure:** `app/` (App Router, `(auth)`/`(portal)` groups, `api/`
+proxy routes), `components/`, `hooks/`, `services/`, `stores/`, `enums/`,
+`types/`, `lib/`, `i18n/`. **Backend structure:** `modules/<module>/` with the
+strict layering `controller → service → repository → prisma`, plus
+`<module>.utilities.ts` / `.types.ts` / `.enums.ts` / `.constants.ts` and
+`dto/`. See `apps/api/CLAUDE.md` "Project Structure".
+
+## Command map (run from repo root, pnpm only, Node 22)
+
+`package.json` is the source of truth (scripts use `turbo` + `pnpm --filter`):
+
+| Need to… | Command |
+| --- | --- |
+| Install | `pnpm install` |
+| Check environment | `pnpm doctor` |
+| Create `.env` (generated secrets) | `pnpm setup:env` |
+| **Typecheck (blocking gate)** | `pnpm typecheck` (`tsc` — blocking; `tsgo` is advisory only) |
+| Lint / strict | `pnpm lint` / `pnpm lint:strict` |
+| Format / check | `pnpm format` / `pnpm format:check` |
+| Test / e2e | `pnpm test` / `pnpm test:e2e` |
+| Build | `pnpm build` |
+| Validate (typecheck + lint:strict + format) | `pnpm validate` |
+| Run web / api (dev) | `pnpm dev:web` / `pnpm dev:api` (`pnpm dev` runs all) |
+| Docker | `pnpm docker:dev` / `:prod` / `:infra` / `:down` |
+| Prisma | `pnpm prisma:generate` / `:migrate` / `:seed` |
+
+Full list: `memory/COMMANDS_MEMORY.md`. **Never claim "all green" unless the
+required gates (`pnpm typecheck`, `pnpm build`, Docker build, gitleaks, CodeQL)
+actually passed** — run them. See `AGENTS.md` §5 and `rules/testing/`.
+
+## Non-negotiable invariants (full detail in the files below)
+
+- **Tenant isolation:** every tenant-owned query / `update` / `delete` is scoped
+  by `tenantId` (`where: { id, tenantId }`). No cross-tenant data, ever.
+- **RBAC:** every endpoint has `@RequirePermission(...)`. Never bypass auth in
+  any environment. → `rules/security/`, `apps/api/CLAUDE.md`.
+- **Secrets:** never commit secrets; only `*.example`. No fallback/zero-entropy
+  production secrets. Connector credentials are **AES-256-GCM** encrypted at rest.
+- **AI safety:** AI may analyze and suggest; destructive actions are
+  `approval-required` (persisted approval + permission). **Never render raw AI
+  output as HTML.** Redact PII/secrets via `@auraspear/ai` `redact()` before
+  model calls. → `rules/ai/`, `docs/AI.md`, `memory/AI_MEMORY.md`.
+- **Code quality:** no `any`, no `// eslint-disable` / `@ts-ignore`. → both
+  `CLAUDE.md` files.
+- **Branch safety:** never work on `main` — branch first (`feat/…`, `fix/…`,
+  `chore/…`). **Prove before deleting** any file/dep/env var (imports, routes,
+  Docker, CI, docs, Prisma, seed, tests). → `rules/global/`.
+
+## Where to look next
+
+- **Rules (hard constraints):** `rules/global/`, `rules/frontend/`,
+  `rules/backend/`, `rules/security/`, `rules/ai/`, `rules/testing/`, `rules/docs/`.
+- **Skills (recipes):** `skills/frontend/`, `skills/backend/`, `skills/ai/`,
+  `skills/devsecops/`, `skills/qa/`, `skills/docs/` (e.g. add-endpoint,
+  add-permission, add-page, add-prisma-model).
+- **Memory (stable truths):** `memory/PROJECT_MEMORY.md`,
+  `TECHNICAL_MEMORY.md`, `SECURITY_MEMORY.md`, `AI_MEMORY.md`,
+  `COMMANDS_MEMORY.md`, `BUSINESS_MEMORY.md`, `DECISIONS_MEMORY.md`.
+- **Context (per-area):** `context/` (load the file for the area you touch).
+- **Docs:** `docs/DOCS_INDEX.md` → `docs/ARCHITECTURE.md`, `docs/AI.md`,
+  `docs/SECURITY.md`, `docs/PRODUCT.md`, `docs/ENVIRONMENT.md`, ADRs in
+  `docs/decisions/`.
+- **Claude subagents:** `.claude/agents/` (e.g. `backend-architect`,
+  `frontend-architect`, `ai-platform-agent`, `qa-gatekeeper`).
+- **Cursor rules:** sibling files in `.cursor/rules/` (this directory).
+
+When finishing a task, end with the report block in `AGENTS.md` §13. Do not say
+"should work" or hide failures — fix them or document the exact blocker.

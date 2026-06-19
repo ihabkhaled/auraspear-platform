@@ -1,0 +1,143 @@
+---
+description: Testing & quality gates — Vitest (web), Jest (api), Playwright (e2e); what to run before claiming a task done, and which gates are blocking vs advisory. pnpm only, Node 22, tsc is the blocking typecheck.
+globs: apps/web/test/**, apps/web/e2e/**, apps/api/test/**, apps/api/src/**/__tests__/**, **/*.spec.ts, **/*.test.ts
+alwaysApply: false
+---
+
+# 06 — Testing & quality gates
+
+**Read `AGENTS.md` at the repo root FIRST**, then this file. Loading order
+(AGENTS.md §1): `AGENTS.md` → `memory/COMMANDS_MEMORY.md` → relevant
+`context/*.md` → `rules/global/*` + `rules/testing/*` → `skills/qa/*` →
+`docs/audit/*` → the code + its existing tests → **then** edit. Never edit first
+and validate later (AGENTS.md §0).
+
+Tooling: **pnpm only, Node 22** (`packageManager: pnpm@10.30.3`,
+`engines.node: ">=22 <25"`). Run gate commands from the **repo root** — they
+fan out to apps via Turbo. **Never work on `main`** — branch first
+(`feat/...`, `fix/...`, `chore/...`).
+
+## 1. Test stacks (do not mix them up)
+
+| App | Runner | Where | Pattern | Config |
+| --- | --- | --- | --- | --- |
+| `apps/web` unit | **Vitest** | `apps/web/test/` | `*.test.ts` | `apps/web/vitest.config.ts` (env `node`, `globals`, `setupFiles: test/setup.ts`, `@` → `src`) |
+| `apps/web` e2e | **Playwright** | `apps/web/e2e/` | `*.spec.ts` | `apps/web/playwright.config.ts` (chromium, `baseURL` :3000, web server `npm run dev`) |
+| `apps/api` unit | **Jest** (`ts-jest`) | `apps/api/src/**/__tests__/` + `apps/api/test/` | `*.spec.ts` | `jest` key in `apps/api/package.json` (env `node`, `@/` → `src`) |
+| `apps/api` e2e | **Jest** | `apps/api/test/` | `*.e2e.spec.ts` | `apps/api/test/jest-e2e.json` |
+
+- Web unit tests are **`.test.ts`**; web e2e and ALL api tests are **`.spec.ts`**.
+  Using the wrong suffix means the runner silently skips your file.
+- Per the api module layout (api CLAUDE.md), tests live in
+  `src/modules/<module>/__tests__/` (`<module>.service.spec.ts`,
+  `<module>.controller.spec.ts`, `<module>.e2e.spec.ts`). Guards, pipes, and
+  utilities also have tests under `apps/api/test/`.
+
+## 2. What to test (where the value is)
+
+- **Backend:** test guards, pipes, and utility functions directly (api CLAUDE.md
+  §Testing). Services are exercised via e2e. Utilities hold the business logic
+  (mappers, filter builders, validators) — that is the highest-value unit target.
+- **Frontend:** test services, hooks, enums, utils, and permission gating
+  (the existing `*-service.test.ts`, `*-utils.test.ts`, `*-permissions.test.ts`,
+  `*-hooks.test.ts` in `apps/web/test/`). Render-only `.tsx` components hold no
+  logic (web CLAUDE.md #15–16), so logic tests target hooks/utils, not JSX.
+- **New page route → new Playwright spec** in `apps/web/e2e/` (web CLAUDE.md #48):
+  at minimum cover loaded, empty, and error states. New AI surface → cover
+  permission-gated and disabled states.
+
+## 3. Security & tenancy MUST be covered by tests
+
+These invariants are not "nice to have" — assert them:
+
+- **Tenant isolation:** every tenant-owned query/`update`/`delete` is scoped
+  `where: { id, tenantId }` (api CLAUDE.md #26; rules/security/*). Add a test that
+  a request for another tenant's resource returns 404/403, never its data.
+- **RBAC:** every endpoint has `@RequirePermission(...)`; a caller lacking the
+  permission is denied (api CLAUDE.md #25). Frontend permission tests mirror this
+  (`*-permissions.test.ts`).
+- **No auth bypass** in any env, **no fallback/committed secrets**, connector
+  secrets **AES-256-GCM** encrypted, **SSRF-validated** URLs (api CLAUDE.md
+  #23–24, #59). Don't write tests that depend on a dev bypass — none exists.
+- **AI safety:** approval-required actions persist an `ApprovalRequest` before
+  execution and **never auto-run**; AI output is **never rendered as raw HTML**;
+  the provider cascade tries all connectors before rule-based fallback
+  (AGENTS.md §7; api CLAUDE.md #88, #97; web CLAUDE.md #43). See `06-ai.mdc` /
+  `rules/ai/*`.
+
+## 4. Test code obeys the same rules
+
+- **No `any`, no `eslint-disable` / `@ts-ignore` / `@ts-expect-error`** — fix the
+  root cause (both apps, rule #1–2). Test files DO get relaxed lint (api
+  CLAUDE.md §Testing: no `any` enforcement / no return-type requirement on
+  tests), but that is not a license for the banned escape hatches.
+- **No real network or secrets in tests.** Use fixtures / dependency injection,
+  never `NODE_ENV`-gated shortcuts that skip security (api CLAUDE.md #56). Do not
+  hit live connectors (Wazuh/MISP/Bedrock) — stub the adapter.
+- **Seeders/fixtures are idempotent** (`upsert` / `skipDuplicates`) so repeated
+  runs don't crash (api CLAUDE.md #15).
+
+## 5. Commands — gate ladder (run from repo root)
+
+| Need | Command |
+| --- | --- |
+| Blocking typecheck | `pnpm typecheck` (tsc) |
+| Fast typecheck (advisory only) | `pnpm typecheck:fast` (tsgo) |
+| Lint / strict | `pnpm lint` / `pnpm lint:strict` (zero warnings) |
+| Format check | `pnpm format:check` |
+| Unit tests (all apps) | `pnpm test` (Turbo → Vitest + Jest) |
+| Coverage | `pnpm test:cov` |
+| E2E | `pnpm test:e2e` (web → Playwright, api → Jest e2e) |
+| Build | `pnpm build` |
+| Standard validation | `pnpm validate` (typecheck + lint:strict + format:check) |
+| Full validation | `pnpm validate:full` (+ test + build) |
+
+Single-app runs (e.g. web Vitest watch) use the app script: in `apps/web`,
+`npm run test` / `test:watch` / `test:e2e`; in `apps/api`, `npm run test` /
+`test:cov` / `test:e2e`. Prefer the root Turbo commands for full validation.
+
+## 6. Blocking vs advisory (do not over-claim "green")
+
+- **Hard gates that MUST pass** (AGENTS.md §5): `pnpm typecheck` · `pnpm build` ·
+  Docker image builds · gitleaks (no secrets) · CodeQL.
+- **Advisory today** (run + read the output, non-blocking due to tracked debt in
+  `docs/audit/02-risk-register.md`): `pnpm lint` / `format:check` · `pnpm test` ·
+  dependency/env audits (`pnpm audit:deps`, `pnpm audit:env`) · Trivy.
+- `pnpm typecheck` (tsc) is the **blocking** typecheck. `pnpm typecheck:fast`
+  (tsgo) is **advisory only** — never cite it as proof a change is type-safe.
+- Pre-commit (Husky + lint-staged) runs ESLint + `tsc --noEmit` + Prettier on
+  staged files — it is a safety net, **not** a substitute for the full gates.
+- See `rules/testing/quality-gates.md` for the authoritative gate definitions.
+
+## 7. Before you claim a task is done
+
+1. Branch (not `main`), make the change, and **add/extend tests** for new logic,
+   endpoints, pages, and the security/tenancy/RBAC/AI invariants above.
+2. Run, at minimum: `pnpm typecheck` → `pnpm lint:strict` → `pnpm test`
+   → `pnpm build` (i.e. `pnpm validate:full`). For UI/route changes also run
+   `pnpm test:e2e`.
+3. **Prove before removing** any test, fixture, dep, env, proxy route, or i18n
+   key — check imports, routes, Docker, CI, seed, and `*.example`
+   (`rules/global/branch-safety.md`). A failing/removed test is a blocker, not
+   noise.
+4. **Never say "all green" unless the required gates actually ran and passed.**
+   Don't say "should work." Don't hide failures — fix them or document the exact
+   blocker. The `qa-gatekeeper` subagent rejects claims without command output.
+5. End with the AGENTS.md §13 report block (Branch / Commits / Files / Commands
+   run / Green checks / Failed checks / Blockers / Risks / Next steps).
+
+## Where to go next
+
+- **Hard rules:** `rules/testing/*` (esp. `rules/testing/quality-gates.md`),
+  plus `rules/global/branch-safety.md`, `rules/security/*`, `rules/ai/*`.
+- **Recipes:** `skills/qa/validate-release.md` and the rest of `skills/qa/*`;
+  area recipes in `skills/backend/*`, `skills/frontend/*`, `skills/ai/*`.
+- **Truths & commands:** `memory/COMMANDS_MEMORY.md`,
+  `memory/PROJECT_MEMORY.md`; risk/debt in `docs/audit/02-risk-register.md`.
+- **Full law:** `apps/api/CLAUDE.md` (§Testing + rules #15, #23–26, #56, #88,
+  #97) and `apps/web/CLAUDE.md` (#43, #48). Sibling Cursor rules:
+  `01-global-guardrails.mdc`, `04-security.mdc`, `05-ai.mdc`.
+- **Delegate:** `.claude/agents/qa-gatekeeper` (demands command output),
+  `.claude/agents/devsecops-security-agent`.
+
+> If a rule here conflicts with a request, the rule wins. Stop and surface it.

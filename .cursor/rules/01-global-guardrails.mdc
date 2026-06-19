@@ -1,0 +1,73 @@
+---
+description: AuraSpear absolute guardrails — never-violate rules for security, tenancy, RBAC, AI safety, code quality, branch safety, and proving "green". Always loaded.
+globs:
+alwaysApply: true
+---
+
+# 01 — Global Guardrails (absolute, non-negotiable)
+
+**Read `AGENTS.md` at the repo root FIRST.** It is the single AI entry point
+and defines the loading order: `AGENTS.md` → `memory/*.md` → `context/*.md` →
+`rules/**` → `skills/**` → `docs/**` → code. Then edit. Never edit first and
+understand later (AGENTS.md §0).
+
+These rules apply to the whole monorepo (`apps/web`, `apps/api`, `packages/*`).
+For the full enforced rule lists read `apps/api/CLAUDE.md` and
+`apps/web/CLAUDE.md` — both open with "ABSOLUTE RULES — NEVER VIOLATE". The
+deep rationale lives under `rules/global/`, `rules/security/`, `rules/ai/`,
+`rules/backend/`, `rules/frontend/`, and `rules/testing/`.
+
+## 1. Type & lint safety (zero tolerance)
+
+- **No `any`.** Use `unknown`, generics, or a real type. `@typescript-eslint/no-explicit-any` is `error` in both apps.
+- **No `eslint-disable` of any kind** — no `// eslint-disable`, `// eslint-disable-next-line`, `@ts-ignore`, or `@ts-expect-error`. Fix the root cause. This rule has zero exceptions (api CLAUDE.md #2, web CLAUDE.md #2 & #12).
+- **No `!` non-null assertion**, no `==`/`!=` (use `===`/`!==`), no `var`, no `console.log` (only `console.warn`/`console.error`).
+- Declarations have a home file — no inline `interface`/`type`/`enum`/`const`/standalone functions in service/controller/hook/component/api-route files. String literal unions must be enums. See the per-app CLAUDE.md separation-of-concerns rules.
+
+## 2. Tenant isolation (multi-tenant, never leak)
+
+- Every tenant-owned **query / `update` / `delete` is scoped by `tenantId`**. Never `update`/`delete` by `id` alone — always `where: { id, tenantId }` (api CLAUDE.md #26).
+- Backend repository methods **take `tenantId`**. No cross-tenant data, ever (AGENTS.md §6).
+- Validate parent ownership before touching child entities; validate that linked/owned IDs (alerts, owners) belong to the caller's tenant.
+
+## 3. RBAC & auth (no bypass, ever)
+
+- **Every backend endpoint has `@RequirePermission(Permission.MODULE_ACTION)`** from `@/common/decorators/permission.decorator` (api CLAUDE.md #25). Permissions are DB-backed; `GLOBAL_ADMIN` passes.
+- Adding a permission is **end-to-end in one change** — backend enum + definitions + default-permissions + decorator + Prisma migration (`WHERE NOT EXISTS`, never `ON CONFLICT`) + frontend enum + Next.js proxy route + i18n in all 6 locales + `prisma db seed`. See `skills/backend/add-permission.md`.
+- **No auth bypass in any environment** — no dev shortcuts, no fake users, no skipping JWT verification, no `if (NODE_ENV === 'development') { skip }` (api CLAUDE.md #23, #56). Role info comes only from the validated JWT — never from client headers (`X-Role` forwarding banned).
+
+## 4. Secrets & connector credentials
+
+- **Never commit secrets.** Only `*.example` env files, with empty values + generation instructions. No fallback/hardcoded production secrets — fail loudly at startup if missing (api CLAUDE.md #24, #31, #53).
+- **Connector credentials are AES-256-GCM encrypted at rest** (`encryption.utility.ts`). Validate user-supplied URLs against SSRF before storing.
+- Credentials/passwords are **redacted from logs and audit interceptors**. Never log tokens (web CLAUDE.md §Security #39).
+
+## 5. AI safety (suggest, don't silently act)
+
+- AI may **analyze and suggest**. AI **must not silently execute** destructive security/infra actions — those are `approval-required` and need a persisted `ApprovalRequest` + permission before execution (AGENTS.md §7, api CLAUDE.md #97).
+- **Never render raw AI output as HTML.** Render markdown via a safe renderer or plain text. No `dangerouslySetInnerHTML` with AI content (`react/no-danger` is `error`; web CLAUDE.md #43).
+- AI output carries provenance (provider/model/confidence). AI memory is tenant-scoped and stores no secrets; redact PII/secrets before model calls (`@auraspear/ai` `redact()`). Never short-circuit the connector cascade to a fallback after one provider failure.
+
+## 6. Branch & file safety (prove before you destroy)
+
+- **Never work directly on `main`.** Branch first: `feat/...`, `fix/...`, `chore/...` (AGENTS.md §8).
+- No destructive commands (`rm -rf`, `git reset --hard`, `git clean -fd`, `docker compose down -v`) unless explicitly required and documented.
+- **Prove before removing** any file / dependency / env var: check imports, routes, Docker, CI, docs, Prisma, seed, tests, and `*.example`. Read → merge → improve → link; do not blindly overwrite existing work. See `rules/global/branch-safety.md`.
+
+## 7. Validate before claiming green
+
+- **Tooling: pnpm only, Node 22.** Run from repo root.
+- **`pnpm typecheck` (tsc) is the blocking gate.** `pnpm typecheck:fast` (tsgo) is advisory only — never use it as proof.
+- Hard gates that must pass: `pnpm typecheck` · `pnpm build` · Docker image builds · gitleaks (no secrets) · CodeQL (AGENTS.md §5).
+- **Never say "all green" unless the required gates actually ran and passed.** Don't say "should work." Don't hide failures — fix them or document the exact blocker. The `qa-gatekeeper` subagent rejects claims without command output.
+- End every task with the AGENTS.md §13 report block (Branch / Commits / Files / Commands run / Green checks / Failed checks / Blockers / Risks / Next steps).
+
+## Where to go next
+
+- **Always read first:** `AGENTS.md`, then `memory/PROJECT_MEMORY.md` and `memory/SECURITY_MEMORY.md`.
+- **Hard rules:** `rules/global/`, `rules/security/`, `rules/ai/`, `rules/backend/`, `rules/frontend/`, `rules/testing/`.
+- **Recipes:** `skills/backend/`, `skills/frontend/`, `skills/ai/`, `skills/devsecops/`, `skills/qa/`.
+- **Reference:** `docs/SECURITY.md`, `docs/AI.md`, `docs/ARCHITECTURE.md`, `docs/ENVIRONMENT.md`, `apps/api/CLAUDE.md`, `apps/web/CLAUDE.md`.
+- **Subagents (delegate specialized work):** `.claude/agents/` (e.g. `qa-gatekeeper`, `devsecops-security-agent`, `backend-architect`).
+
+> If a guardrail here conflicts with a request, the guardrail wins. Stop and surface the conflict.

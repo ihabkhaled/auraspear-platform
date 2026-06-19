@@ -1,0 +1,183 @@
+---
+description: Backend rules for apps/api (NestJS 11 / Prisma 7 / Postgres / Redis BFF) — strict layering, tenant scoping, Zod DTO validation, RBAC permissions, AES-256-GCM secrets. Tenant-safe, strict TS.
+globs: apps/api/**
+alwaysApply: false
+---
+
+# Backend rules — apps/api (@auraspear/api)
+
+**Read `AGENTS.md` at the repo root FIRST**, then this file. The full, authoritative
+ruleset (100+ ABSOLUTE rules + every ESLint rule + the security architecture) lives in
+`apps/api/CLAUDE.md` — when in doubt, that file wins. Loading order: `AGENTS.md` →
+`memory/PROJECT_MEMORY.md` + `memory/TECHNICAL_MEMORY.md` + `memory/SECURITY_MEMORY.md`
+→ `context/*.md` → `rules/global/*` + `rules/backend/*` + `rules/security/*` +
+`rules/ai/*` → `skills/backend/*` → code + tests → **then** edit. No agent edits first
+and understands later (AGENTS.md §0).
+
+Stack: NestJS 11 (TypeScript strict), Prisma 7 → PostgreSQL, Redis (ioredis via the
+`@Global()` `RedisModule`), Zod DTOs (no class-validator), OIDC + JWT/JWKS auth,
+nestjs-pino logging, Helmet + Throttler + SSRF + AES-256-GCM. Pattern: BFF — the
+Next.js frontend never calls Wazuh/OpenSearch/MISP/Bedrock directly; it goes through
+this API. Tooling: pnpm only, Node 22. Blocking typecheck is `pnpm typecheck` (`tsc`);
+`tsgo` (`pnpm typecheck:fast`) is advisory only. Never work on `main` — branch first.
+
+## Non-negotiable (never violate)
+
+- **No `any`. No `eslint-disable` / `@ts-ignore` / `@ts-expect-error`.** Fix the root
+  cause. Both are `error`. No `!` non-null assertion, no `==`/`!=`, no `var`, no
+  `console.log` (only `console.warn`/`console.error`; prefer NestJS `Logger` /
+  `ServiceLogger`). No raw `new Date()`/`Date.now()` — use `date-time.utility.ts`.
+- **Tenant isolation is absolute.** Every tenant-owned **query / `update` / `delete`
+  is scoped by `tenantId`**. Never `update`/`delete` by `id` alone — always
+  `where: { id, tenantId }` (use `updateMany`/`findFirst` when Prisma lacks a compound
+  unique). Every repository method takes `tenantId`. Validate parent ownership before
+  touching child entities; verify linked/owned IDs (alerts, case owners) belong to the
+  caller's tenant (CLAUDE.md #8, #26, #41, #42, #48, #75).
+- **RBAC, never bypassed.** **Every endpoint has `@RequirePermission(Permission.MODULE_ACTION)`**
+  from `@/common/decorators/permission.decorator`. Permissions are DB-backed;
+  `GLOBAL_ADMIN` bypasses in `PermissionsGuard` (never in services). `@Roles()` is only
+  for the `role-settings` controller; connector mutations also require
+  `@Roles(UserRole.TENANT_ADMIN)` (CLAUDE.md #25, #55).
+- **No auth bypass in any environment** — no dev shortcuts, no fake users, no skipping
+  JWT verification, no `if (NODE_ENV === 'development') { skip }`. Role comes only from
+  the validated JWT — never from client `X-Role`/auth headers (CLAUDE.md #23, #56, #76).
+- **No committed/fallback secrets.** JWT/encryption keys + API keys load from env with
+  **no defaults** — fail loudly at startup if missing. Only `*.example` files with empty
+  values + generation comments; `env.validation.ts` rejects all-zero keys. Connector
+  credentials are **AES-256-GCM** encrypted at rest (`encryption.utility.ts`); SSRF-validate
+  URLs at input time before storing (CLAUDE.md #24, #53, #59).
+- **Prove before deleting** any file/dep/env/route/migration (imports, routes, Docker,
+  CI, Prisma, seed, tests, `*.example`). Read → merge → improve, don't overwrite.
+
+## Strict layering (ESLint-enforced — `no-restricted-syntax`)
+
+```
+Controller → Service → Repository → Prisma
+              ↓
+          Utilities
+```
+
+- **Controllers** only route and delegate. No business logic, no `try/catch` (let
+  `GlobalExceptionFilter` handle errors), no `throw`, no transforms, no inline
+  constants/functions. Call ONE service method and return. Guard chain on mutations:
+  `AuthGuard → TenantGuard → PermissionsGuard`.
+- **Services** are thin orchestrators: validate → call util → call repo → return. **Never
+  import `PrismaService`** — data access goes through the repository. No inline helpers
+  (→ `<module>.utilities.ts`), no inline constants (→ `<module>.constants.ts`). **No
+  method > 20–30 lines**, cyclomatic complexity ≤ 10. Extract every 3–5 lines of cohesive
+  logic to a utility.
+- **Repositories** are pure data access: accept fully-built params, return raw Prisma
+  results. No conditionals, transforms, `throw`/`BusinessException`. **Every method takes
+  `tenantId`.** Every `findMany` is paginated (`take` + `skip`, safety `take: 500`);
+  every FK / `where` field has an `@@index` (esp. `tenantId`).
+- **Utilities** hold all business logic — mappers, transformers, filter builders,
+  validators, formatters — as exported named pure functions. No types/enums/constants
+  in utility files.
+
+## Declarations have a home file (ESLint-enforced)
+
+No inline `interface`/`type`/`enum`/`const`/standalone-function in service, controller,
+repository, guard, interceptor, filter, pipe, or utility files.
+
+- Types/interfaces → `<module>.types.ts` or `src/common/interfaces/`.
+- Enums → `<module>.enums.ts` or `src/common/enums/`. **String literal unions are banned
+  and raw string literals must be enums** — use `CaseCycleStatus.ACTIVE`, never `'active'`;
+  same in `switch/case` and state machines (e.g. hunt `VALID_TRANSITIONS`).
+- Constants → `<module>.constants.ts` or `src/common/constants/`. AI agent IDs, OSINT
+  source defs, etc. live in constants/enums, never hardcoded.
+- Every function has an **explicit return type**. Files are `kebab-case`; full words only
+  (`.utility.ts` not `.util.ts`, `definition` not `def`). `node:` import prefix required.
+
+## DTO validation (Zod, not class-validator)
+
+- All DTOs are Zod schemas in `dto/<module>.dto.ts`, validated via `ZodValidationPipe`.
+- **Every string field has `.max()`**; **every array field has `.max()`** (unbounded =
+  DoS). JSON/record fields (`config`, `metadata`, `parameters`) need a `.refine()` size
+  cap (~64KB) on top of the global 1MB body limit (CLAUDE.md #27, #28, #78).
+- **Never `@Body()` a DTO type with method-level `@UsePipes()` when `@Param()` is present**
+  — apply the pipe on `@Body()`: `@Body(new ZodValidationPipe(Schema)) dto: Dto`.
+- **Never `@Query()` a DTO type directly** — NestJS skips Zod on query strings. Parse
+  manually: `Schema.parse(rawQuery)`, with explicit number coercion (CLAUDE.md #16, #19).
+- Connector configs are validated by **per-type Zod schemas** (wazuh, graylog, misp,
+  shuffle, bedrock, …) via `validateConnectorConfig(type, config)` before encrypting.
+
+## Errors, i18n, rate limiting
+
+- **Every exception is a `BusinessException`** with a specific `messageKey`
+  (`errors.<module>.<action>`) — never raw `NotFoundException`/`ForbiddenException`/etc.
+  Every new `messageKey` must exist in **all 6 i18n files** (`en, ar, es, fr, de, it`).
+- `GlobalExceptionFilter` sanitizes all responses in **every** environment — no stack
+  traces, internal paths, or Prisma table/column names leaked. It explicitly handles
+  `PrismaClientKnownRequestError`/`ValidationError`/`InitializationError` (CLAUDE.md
+  #44, #63, #77, #82).
+- Apply `@Throttle()` to every mutation/controller. Tiers: auth 5/min, standard CRUD
+  30/min, bulk 5/min, delete 10/min, AI 10/min (CLAUDE.md #32, #33, #74, #80).
+
+## Prisma & migrations
+
+- **Every schema change ships a migration.** Use `npx prisma migrate dev --name <desc>`;
+  **never edit existing migrations** — create new ones. Test on a fresh DB. For
+  permission rows use the `WHERE NOT EXISTS` pattern, **never `ON CONFLICT ("key")`** —
+  the unique constraint is compound `(tenantId, key)` (CLAUDE.md #30, #85).
+- **Seeds are idempotent** — `upsert` / `findFirst` guard / `createMany({ skipDuplicates })`,
+  deterministic UUIDs, per-section try/catch. Safe to run twice and under `start:prod`.
+  No fallback `SEED_DEFAULT_PASSWORD` (required env, no `??`). Update the seed when new
+  tables need defaults (CLAUDE.md #15, #54).
+- Batch DB ops in chunks of 50 via `Promise.allSettled()`; never fire hundreds of
+  concurrent Prisma calls. Aggregate with `_count`/`groupBy`, not `findMany().length`.
+  Connection pool is bounded (`connection_limit=20&pool_timeout=10`).
+
+## Adding a permission (single end-to-end change)
+
+All atomically (CLAUDE.md #85, §RBAC) — see `skills/backend/add-permission.md`:
+backend `Permission` enum → `permission-definitions.ts` (labelKey + sortOrder) →
+`default-permissions.ts` → `@RequirePermission()` on the endpoint → Prisma migration
+(`WHERE NOT EXISTS`) → **frontend enum mirror + Next.js `src/app/api/.../route.ts` proxy
++ service + hook + UI** → i18n in all 6 locales (feature + `roleSettings.permissions.*`)
+→ `npx prisma db seed`. Every backend endpoint the frontend calls needs its proxy route
+(CLAUDE.md #86); every sortable column must be in the DTO `sortBy` enum + `buildOrderBy`
+(CLAUDE.md #87).
+
+## AI safety (suggest, don't silently act)
+
+AI may **analyze and suggest**; destructive security/infra actions are
+`approval-required` and need a persisted `ApprovalRequest` + permission before execution
+(CLAUDE.md #97). AI investigation must verify alert tenant ownership (#48). The connector
+cascade (bedrock → llm_apis → openclaw_gateway) tries **all** configured connectors
+before rule-based fallback — never short-circuit after one failure (#88); no
+env-gated mocks (`BEDROCK_MOCK`) in production (#89). Redact PII/secrets before model
+calls (`@auraspear/ai` `redact()`); AI memory is tenant-scoped and stores no secrets.
+Dispatch automation through `OrchestratorService`; AI listeners are fire-and-forget and
+must never block core ops (#31, #32 audit). Deeper rules: `rules/ai/*`, `skills/ai/*`.
+
+## Shared infrastructure
+
+- **Never instantiate external clients directly** (`new Redis()`, Axios, crypto, …) in
+  service constructors — inject the shared `@Global()` module (`REDIS_CLIENT` from
+  `src/redis`, `PrismaService`, `AxiosService`, …). New infra → make a shared module
+  first (CLAUDE.md #29, #33 audit).
+- Service logging uses `ServiceLogger` from `src/common/services/service-logger.ts` —
+  no inline `logEntry`/`logError` helpers (#34 audit).
+- JWT signing/verification pins `HS256`; tokens carry `jti` + `tokenType`; logout +
+  refresh rotation blacklist old JTIs in Redis (CLAUDE.md #29, #37, #38, #51).
+
+## Tests & gates
+
+Per module: unit (services/utilities), e2e (endpoints), validation, **RBAC denial**,
+**tenant-isolation**, error-path, and seed-idempotency tests. Before claiming done, run
+`pnpm typecheck` (+ `pnpm lint`, `pnpm build`, `pnpm test`). Never say "all green" unless
+the required gates actually passed; end with the AGENTS.md §13 report block.
+
+## Recipes & deeper docs
+
+- Add an endpoint → `skills/backend/add-endpoint.md`
+- Add a permission (end-to-end) → `skills/backend/add-permission.md`
+- Add a Prisma model → `skills/backend/add-prisma-model.md`
+- Hard rules → `rules/backend/*`, plus `rules/global/branch-safety.md`,
+  `rules/security/*`, `rules/ai/*`, `rules/testing/quality-gates.md`
+- Stable truths → `memory/PROJECT_MEMORY.md`, `memory/TECHNICAL_MEMORY.md`,
+  `memory/SECURITY_MEMORY.md`, `memory/AI_MEMORY.md`; area notes → `context/*.md`
+- Reference → `docs/ARCHITECTURE.md`, `docs/API.md`, `docs/SECURITY.md`, `docs/AI.md`,
+  `docs/ENVIRONMENT.md`; full backend law → `apps/api/CLAUDE.md`
+- Subagents → `.claude/agents/backend-architect.md`, `database-prisma-agent.md`,
+  `devsecops-security-agent.md`, `qa-gatekeeper.md`

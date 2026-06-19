@@ -1,0 +1,91 @@
+---
+description: AuraSpear danger zone — destructive commands, pushing to main, and committing secrets are forbidden without explicit, documented approval. Stop and ask. Always loaded.
+globs:
+alwaysApply: true
+---
+
+# 08 — Danger Zone (stop before you destroy)
+
+**Read `AGENTS.md` at the repo root FIRST.** It is the single AI entry point and
+fixes the loading order: `AGENTS.md` → `memory/*.md` → `context/*.md` → `rules/**`
+→ `skills/**` → `docs/**` → code → **then** act. Never edit/run first and
+understand later (AGENTS.md §0). This file restates AGENTS.md §8 ("Branch &
+safety rules") as a hard stop. When a request lands in this zone, **the rule wins
+— stop and surface the conflict.**
+
+## 1. Destructive commands — never without explicit, documented approval
+
+Do not run any of these unless the user explicitly required it **and** it is
+documented in the task (AGENTS.md §8):
+
+- **`rm -rf`** — recursive force delete. Prove the path first.
+- **`git reset --hard`** — discards uncommitted and committed work. Prefer `git
+  stash` or a new commit.
+- **`git clean -fd`** (and `-fdx`) — deletes untracked files/dirs, including
+  scaffolded-but-unstaged work. There is no undo.
+- **`docker compose down -v`** / `--volumes` — destroys Postgres + Redis volumes
+  and all local data. The safe stop is **`pnpm docker:down`** (no `-v`); the dev
+  stacks are `pnpm docker:dev` / `:prod` / `:infra` (`memory/COMMANDS_MEMORY.md`,
+  compose files under `infra/docker/`).
+
+Same bar for any equivalent: `git push --force` over a shared branch, `prisma
+migrate reset`, `DROP`/`TRUNCATE` SQL, `rm` of a lockfile, mass file deletion.
+
+**Prove before you destroy.** Before removing any file / dependency / env var,
+check imports, routes, Docker, CI, docs, Prisma, seed, tests, and `*.example`
+(AGENTS.md §8). Read → merge → improve → link; never blindly overwrite existing
+work. Rationale: `rules/global/branch-safety.md`.
+
+## 2. Never push to `main` directly
+
+- **Never work on, commit to, or push `main`.** Branch first: `feat/...`,
+  `fix/...`, `chore/...` (AGENTS.md §8). If you find yourself on `main`, stop and
+  branch.
+- **No `--force` / `--force-with-lease`** to a shared branch, and **no
+  `--no-verify`** to skip Husky pre-commit (ESLint + `tsc` + Prettier) — fix the
+  failure instead (`apps/api/CLAUDE.md` / `apps/web/CLAUDE.md`, "Pre-commit Hooks").
+- Only commit / push when the user asks. End every task with the AGENTS.md §13
+  report block (Branch / Commits / Files / Commands run / Green checks / Failed
+  checks / Blockers / Risks / Next steps).
+
+## 3. Never commit secrets
+
+- **Only `*.example` env files are committed**, with **empty values** plus
+  generation instructions in comments. No real `.env`, no keys, no tokens, no
+  fallback/hardcoded production secrets (api CLAUDE.md #24, #53; `rules/security/`,
+  rule `04-security.mdc` §1).
+- **gitleaks (`pnpm scan:secrets`) is a hard gate** — a committed secret fails CI
+  (AGENTS.md §5). If you suspect a leak, stop: rotate the secret and scrub
+  history, don't just delete the line in a new commit.
+- Connector credentials are **AES-256-GCM encrypted at rest**
+  (`apps/api/src/common/utils/encryption.utility.ts`) — never store or log them in
+  plaintext (rule `04-security.mdc` §1).
+
+## 4. Halt protocol when a request is in the danger zone
+
+1. **Stop.** Do not run the command.
+2. **Quote** the exact action and why it is dangerous (data loss / history loss /
+   secret exposure / `main` protection).
+3. **Offer the safe alternative** (branch + new commit, `git stash`, `pnpm
+   docker:down` without `-v`, `*.example` with empty values).
+4. **Proceed only on explicit, documented approval** — restate the scope before
+   acting. The `qa-gatekeeper` subagent rejects "done" claims without command
+   output; the `devsecops-security-agent` owns destructive-op review.
+
+## Where to go next
+
+- **Always read first:** `AGENTS.md` (§0, §5, §8, §13), then
+  `memory/PROJECT_MEMORY.md` and `memory/SECURITY_MEMORY.md`;
+  `memory/COMMANDS_MEMORY.md` for the safe command map.
+- **Sibling rules:** `01-global-guardrails.mdc` §6 (branch & file safety),
+  `04-security.mdc` §1 (secrets) and §6 (Docker); hard rules in
+  `rules/global/branch-safety.md`, `rules/security/`, `rules/testing/quality-gates.md`.
+- **Recipes:** `skills/devsecops/run-security-scan.md`,
+  `skills/devsecops/add-env-variable.md`, `skills/qa/validate-release.md`.
+- **Reference:** `docs/SECURITY.md`, `docs/ENVIRONMENT.md`, `docs/OPERATIONS.md`;
+  full law in `apps/api/CLAUDE.md` and `apps/web/CLAUDE.md`.
+- **Subagents (delegate the risky call):** `.claude/agents/devsecops-security-agent.md`,
+  `.claude/agents/qa-gatekeeper.md`.
+
+> If a danger-zone rule conflicts with a request, the rule wins. Stop, surface
+> the conflict, and wait for explicit documented approval.

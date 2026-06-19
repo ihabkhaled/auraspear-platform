@@ -1,0 +1,156 @@
+---
+description: AI subsystem rules — governance, approval gating, provider cascade, memory, redaction, and output safety for packages/ai and apps/api AI modules. Tenant-safe, RBAC-aware, no raw HTML.
+globs: packages/ai/**, apps/api/src/modules/ai/**, apps/web/src/components/ai-renderer/**, apps/web/src/hooks/useAi*.ts
+alwaysApply: false
+---
+
+# 05 — AI subsystem rules (governance, approval, memory, output)
+
+**Read `AGENTS.md` at the repo root FIRST**, then this file. Loading order
+(AGENTS.md §1): `AGENTS.md` → `memory/AI_MEMORY.md` + `memory/SECURITY_MEMORY.md`
+→ `context/*.md` → `rules/global/*` + `rules/security/*` + `rules/ai/*` →
+`skills/ai/*` → `docs/AI.md` + `docs/ai/*` → code + tests → **then** edit. Never
+edit first and understand later.
+
+The single source of truth for governance/policy is `memory/AI_MEMORY.md` and
+`docs/AI.md`. The shared, dependency-free contracts live in `packages/ai`
+(`safety.ts`, `redaction.ts`, `model-router.ts`, `evaluators.ts`, `prompts.ts`,
+`types.ts`). The live subsystem is `apps/api/src/modules/ai` (`chat/`, `memory/`,
+`orchestrator/`, `prompt-registry/`, `usage-budget/`, `writeback/`, `eval/`,
+`semantic-search/`, `feature-catalog/`, `simulation/`). The full enforced backend
+rule list (rules #88–100 cover AI) is `apps/api/CLAUDE.md`; AI-UI rules
+(#41–63) are in `apps/web/CLAUDE.md`. When in doubt, those files win.
+
+Tooling: **pnpm only, Node 22.** Blocking typecheck is `pnpm typecheck` (`tsc`);
+`pnpm typecheck:fast` (`tsgo`) is advisory only. **Never work on `main`** —
+branch first.
+
+## 1. Governance — analyze/suggest, never silently act
+
+- AI may **analyze and suggest**. AI **must NOT silently execute** destructive
+  security/infra actions (run a playbook, isolate a host, mutate a case/alert).
+  Those are `approval-required` (AGENTS.md §7; api CLAUDE.md #97).
+- Classify every AI-proposed action with `AiActionCategory` from
+  `@auraspear/ai` (`safety.ts`): `ANALYSIS_ONLY` / `SUGGESTED` /
+  `APPROVAL_REQUIRED` / `AUTO_ALLOWED`. Never invent ad-hoc category strings —
+  use the enum (web CLAUDE.md #44, #50–52).
+- Decide approval via `evaluateApproval(action)` — it is conservative by design:
+  anything `destructive` or HIGH/CRITICAL risk requires approval; `AUTO_ALLOWED`
+  bypasses approval only for non-destructive low/medium risk and must be
+  allow-listed per tenant.
+
+## 2. Approval gating (persisted, before execution)
+
+- **No approval-required action runs without a persisted `ApprovalRequest`
+  record created BEFORE execution** (api CLAUDE.md #97). Never execute on the
+  optimistic path; never auto-approve in any environment.
+- The action also needs the caller's RBAC permission — every AI endpoint carries
+  `@RequirePermission(Permission.MODULE_ACTION)` (api CLAUDE.md #25). No auth
+  bypass, no `NODE_ENV`-gated shortcuts (api CLAUDE.md #23, #56).
+- Agent configs are constrained: validate against `AiAgentId` /
+  `AiProviderMode` enums; `trigger_config` JSON is validated by a mode-specific
+  Zod schema (no arbitrary JSON); every trigger evaluation is logged with
+  trigger type, result, `agent_id`, `tenant_id` (api CLAUDE.md #92–94, #99).
+
+## 3. Provider routing (cascade, never short-circuit)
+
+- Routing is a cascade: **`bedrock → llm_apis → openclaw_gateway → rule-based`**.
+  Try **ALL** configured connectors before falling back; never short-circuit to
+  rule-based after a single provider failure (api CLAUDE.md #88;
+  web CLAUDE.md #30).
+- **No mock/placeholder providers in production code** — no `BEDROCK_MOCK` or
+  any env-gated mock mode. Call the real SDK/API; on failure, try the next
+  connector (api CLAUDE.md #89). Rule-based output is allowed only when no
+  connector is configured and must be labeled `model: 'rule-based'`.
+- Record the provider/model actually used in the audit log and in result
+  provenance.
+
+## 4. Tenant isolation & connector secrets
+
+- AI memory, transcripts, findings, agent configs, and usage budgets are
+  **tenant-scoped**. Every backend AI query/`update`/`delete` is scoped by
+  `tenantId` (`where: { id, tenantId }` — never by `id` alone; api CLAUDE.md #26).
+- AI investigation **validates resource tenant ownership** (alert/case belongs to
+  the caller's tenant) before acting — no cross-tenant investigation
+  (api CLAUDE.md #48).
+- Connector credentials and OSINT source API keys are **AES-256-GCM encrypted at
+  rest** (`encryption.utility.ts`); custom OSINT source URLs pass **SSRF
+  validation** (`SsrfUtility.validateUrl()`) at input time, before encrypting
+  (api CLAUDE.md #95, #96). Never put OSINT keys in frontend state/`localStorage`.
+
+## 5. Redaction & memory (no secrets near the model)
+
+- **Redact PII/secrets BEFORE** sending context to a model and BEFORE persisting
+  transcripts: `redact()` from `@auraspear/ai` (`redaction.ts`) — covers private
+  keys, JWTs, AWS keys, bearer tokens, generic `secret=`/`password=`, email,
+  IPv4. Use the `keep` argument only when an indicator (e.g. an IP) is the very
+  thing under investigation.
+- **AI memory (`UserMemory`) must never store secrets**; it is tenant-scoped.
+  Memory retrieval is **non-blocking** — a retrieval/embedding failure never
+  crashes chat (web CLAUDE.md AI Memory section).
+- Never store AI transcripts in `localStorage` — server-side session only
+  (web CLAUDE.md #46). Credentials/tokens are redacted from logs and audit
+  interceptors.
+
+## 6. Output safety (never raw HTML)
+
+- **Never render raw AI output as HTML.** Render markdown via a safe renderer or
+  plain text. `dangerouslySetInnerHTML` with AI content is banned
+  (`react/no-danger: error`; web CLAUDE.md #43). Transform inter-agent JSON to
+  human-readable before rendering (web CLAUDE.md #58).
+- Every AI output is **attributable**: provenance (provider, model, confidence,
+  prompt version, token usage) + citations where applicable. Each AI surface
+  shows loading / error / confidence / provider attribution + a regenerate and a
+  dismiss affordance (web CLAUDE.md #42, #47).
+- Structured blocks (risk gauges, IOC tables, MITRE maps, timelines) use the
+  standardized `apps/web/src/components/ai-renderer/` components — no ad-hoc
+  inline rendering (web CLAUDE.md #53). Every AI surface registers in the
+  `AiFeatureKey` catalog before implementation (web CLAUDE.md #49).
+
+## 7. Budget & evaluation
+
+- **Check the per-agent token quota before calling the provider**
+  (api CLAUDE.md #98); usage lives in `apps/api/src/modules/ai/usage-budget/`.
+- AI endpoints are rate-limited: `@Throttle({ default: { limit: 10, ttl: 60000 } })`
+  at controller level (api CLAUDE.md #33).
+- Behavior changes go through the golden-case harness in `@auraspear/ai`
+  (`evaluators.ts`) / `apps/api/src/modules/ai/eval/`. **Safety assertions fail a
+  run regardless of pass rate** — do not relax them to make eval pass.
+
+## 8. Code-quality invariants (apply here too)
+
+- **No `any`. No `eslint-disable` / `@ts-ignore` / `@ts-expect-error`.** Fix the
+  root cause (both apps, rule #1–2). No `!`, no `==`/`!=`, no `var`, no
+  `console.log`.
+- Declarations have a home file: enums in `<module>.enums.ts` (backend) /
+  `src/enums/` (frontend); types in `<module>.types.ts` / `src/types/`; constants
+  in `<module>.constants.ts` / `src/lib/constants/`. **String literal unions are
+  banned** — use enums (`AiActionCategory`, `AiProviderMode`, `AiTriggerMode`,
+  `AiAgentId`). Backend OSINT/builtin source definitions live in constants files,
+  never hardcoded in services (api CLAUDE.md #100).
+- `packages/ai` stays **dependency-free** (no SDKs, no infra) — provider-agnostic
+  contracts + pure utilities only (see its `index.ts` header).
+
+## 9. Branch & validate before claiming green
+
+- Branch first (`feat/...`, `fix/...`, `chore/...`); never destructive commands
+  unless required + documented. **Prove before removing** any AI file/dep/env/
+  proxy/i18n key (`rules/global/branch-safety.md`).
+- Before claiming done, run `pnpm typecheck` (+ `pnpm lint`, `pnpm build`, AI
+  eval). **Never say "all green" unless the required gates actually passed.** End
+  with the AGENTS.md §13 report block. The `qa-gatekeeper` subagent rejects
+  claims without command output.
+
+## Where to go next
+
+- **Governance & truths:** `memory/AI_MEMORY.md`, then `memory/SECURITY_MEMORY.md`.
+- **Hard rules:** `rules/ai/*`, plus `rules/security/*`, `rules/global/branch-safety.md`,
+  `rules/testing/quality-gates.md`.
+- **Recipes:** `skills/ai/add-ai-feature.md`, `skills/frontend/add-ai-panel.md`.
+- **Area notes:** `context/*.md` (the AI surface you are working in).
+- **Reference:** `docs/AI.md` + `docs/ai/*`; full law → `apps/api/CLAUDE.md`
+  (#88–100) and `apps/web/CLAUDE.md` (#41–63); contracts → `packages/ai`.
+- **Delegate:** `.claude/agents/ai-platform-agent`, `devsecops-security-agent`,
+  `qa-gatekeeper`.
+
+> If a rule here conflicts with a request, the rule wins. Stop and surface it.

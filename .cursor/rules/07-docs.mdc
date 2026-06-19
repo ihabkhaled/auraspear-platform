@@ -1,0 +1,122 @@
+---
+description: Docs rules — keep docs in sync with behavior, write ADRs for decisions, no stale docs after a behavior change. Covers docs/**, every *.md (AGENTS.md, CLAUDE.md, READMEs), rules/, skills/, memory/, context/.
+globs: docs/**, *.md, **/*.md
+alwaysApply: false
+---
+
+# 07 — Docs rules (sync, ADRs, no stale docs)
+
+**Read `AGENTS.md` at the repo root FIRST**, then this file. Docs are part of the
+contract, not an afterthought: AGENTS.md §0 — *no AI agent may edit first and
+understand later*; §13 — every finishing report lists `Files updated:` which must
+include docs you changed. Loading order (AGENTS.md §1): `AGENTS.md` →
+`memory/PROJECT_MEMORY.md` (+ `memory/DECISIONS_MEMORY.md` for ADR context) →
+`context/*.md` → `rules/global/*` + `rules/docs/*` → `skills/docs/*` →
+`docs/**` + the code you touched → **then** edit.
+
+Tooling: **pnpm only, Node 22.** Markdown is Prettier-formatted (`pnpm format` /
+`pnpm format:check` — `.husky/pre-commit` formats staged `.md`). **Never work on
+`main`** — branch first (`chore/docs-...`, `feat/...`, `fix/...`).
+
+## 1. Docs are not optional — change behavior, change docs in the same PR
+
+- **If you change behavior, you change the docs in the SAME change.** A code/config
+  change that leaves its docs describing the old behavior is an incomplete change,
+  not a follow-up. This is the prime directive of this file.
+- Map a change to the doc(s) it touches before you commit:
+  - new/changed endpoint or proxy route → `docs/API.md`
+  - layering/module/structure change → `docs/ARCHITECTURE.md` (+ `docs/architecture/`)
+  - AI governance / provider cascade / memory → `docs/AI.md` (+ `docs/ai/`) and `memory/AI_MEMORY.md`
+  - auth / RBAC / tenancy / secrets / connector encryption → `docs/SECURITY.md` (+ `docs/security/`) and `memory/SECURITY_MEMORY.md`
+  - new/renamed env var → `docs/ENVIRONMENT.md` **and** the `*.env.example` files (never commit real secrets — `*.example` only; AGENTS.md §6)
+  - new pnpm script or command → `memory/COMMANDS_MEMORY.md` and AGENTS.md §4 command map
+  - product/feature scope → `docs/PRODUCT.md`, `docs/ROADMAP.md`
+  - install/run/deploy/ops change → `INSTALL.md`, `docs/DEPLOYMENT.md`, `docs/OPERATIONS.md`, `docs/TROUBLESHOOTING.md`
+- The **enforced rule list lives in the app CLAUDE.md files**, not here. When you
+  add or change an ESLint-enforced rule, update the numbered list in
+  `apps/api/CLAUDE.md` (#1–100) or `apps/web/CLAUDE.md` (#1–63) — and, if it is an
+  AI-onboarding rule, the mirror in `rules/` and the relevant `.cursor/rules/*.mdc`.
+- **i18n note:** docs don't substitute for translations. A new `messageKey` or
+  user-facing string still needs all 6 locale files (`en, ar, es, fr, de, it`);
+  see `04-security.mdc` / api CLAUDE.md #49 — docs just describe it.
+
+## 2. ADRs — record decisions, don't bury them in prose
+
+- A **significant, hard-to-reverse decision** gets an ADR in `docs/decisions/`,
+  not a paragraph in a random doc. Triggers: a dependency/framework choice, an
+  architecture or layering change, a security/tenancy model change, an
+  AI-governance policy, removing or replacing a subsystem, anything you'd want a
+  future contributor to find the *why* of.
+- **Format** — follow the existing ADRs exactly (`ADR-0001`…`ADR-0004`):
+  - filename: `docs/decisions/ADR-NNNN-kebab-title.md`, `NNNN` zero-padded, next
+    in sequence (next free number after `ADR-0004`).
+  - header: `# ADR-NNNN — Title`, then `- Status:` (`Proposed`/`Accepted`/
+    `Superseded`), `- Date:` (ISO `YYYY-MM-DD`), `- Deciders:`.
+  - sections: `## Context` → `## Decision` → `## Consequences` →
+    `## Alternatives considered`.
+- **Never rewrite history of an Accepted ADR.** To change a decision, add a new
+  ADR and mark the old one `Superseded by ADR-NNNN`. Cross-link both.
+- Also append a one-line entry to `memory/DECISIONS_MEMORY.md` so the stable-truth
+  index stays current.
+
+## 3. No stale docs — prove the doc matches reality
+
+- **Every concrete claim in a doc must be true against the current repo** — file
+  paths, command names, env vars, script names, endpoint paths, permission keys.
+  If you cite it, it must exist. Stale > missing is false: a wrong doc is worse
+  than no doc.
+- **Prove before you delete from a doc** (AGENTS.md §8): before removing a
+  documented file/dep/env/route/command, confirm it's actually gone from code,
+  routes, Docker, CI, Prisma, seed, tests, and `*.env.example`. Don't leave
+  dangling references; don't delete a doc line for something that still ships.
+- **Fix forward-references too.** AGENTS.md §12 points to `docs/DOCS_INDEX.md` as
+  the central index — that file does **not exist yet**. If you add it, wire it up;
+  if you cite a doc that doesn't exist, either create it or fix the link. No
+  broken internal links.
+- Keep the **`rules/docs/` and `skills/docs/` scaffolds** filled as you formalize
+  doc conventions — they exist but are currently empty; this `.mdc` is the interim
+  source of truth and must stay aligned with whatever lands there.
+
+## 4. Style — practical, scannable, enforceable
+
+- Match the house style of existing docs and these `.cursor/rules/*.mdc`:
+  ATX `#` headings, short scannable bullets, fenced code blocks with a language,
+  relative links to sibling files. No fluff, no marketing copy in technical docs.
+- **Cite paths, not vibes.** Reference files by relative path
+  (`apps/api/src/...`, `rules/security/...`, `docs/AI.md`). When you state a rule,
+  point to where it's enforced (CLAUDE.md rule number, ESLint rule, ADR).
+- Markdown must pass `pnpm format:check` (Prettier: `lf`, 100 print width). Don't
+  hand-format tables in a way Prettier will rewrite — run the formatter.
+- **Docs describe; they do not weaken invariants.** A doc that says "in dev you can
+  skip auth/tenant scoping" is wrong by construction — there are no such bypasses
+  (AGENTS.md §6–7; api CLAUDE.md #23, #56). If a doc and an invariant disagree, the
+  invariant wins and the doc is the bug.
+
+## 5. Branch & validate before claiming done
+
+- Branch first; never run destructive commands unless required **and** documented
+  (`rules/global/branch-safety.md`).
+- A docs-only change still runs `pnpm format:check` (and `pnpm typecheck` if you
+  touched code samples that compile). **Never say "all green" unless the required
+  gates actually passed.** End with the AGENTS.md §13 report block, listing the
+  exact docs in `Files updated:`. The `qa-gatekeeper` subagent rejects claims
+  without command output.
+
+## Where to go next
+
+- **Stable truths:** `memory/PROJECT_MEMORY.md`, `memory/DECISIONS_MEMORY.md`,
+  `memory/COMMANDS_MEMORY.md`.
+- **Hard rules:** `rules/docs/*` (scaffold), `rules/global/branch-safety.md`,
+  plus the area rule you changed (`rules/backend`, `rules/frontend`,
+  `rules/security`, `rules/ai`, `rules/testing`).
+- **Recipes:** `skills/docs/*` (scaffold); the per-task skill you ran
+  (`skills/backend/add-endpoint.md`, `skills/devsecops/add-env-variable.md`, …)
+  tells you which doc it changes.
+- **Reference docs:** `docs/ARCHITECTURE.md`, `docs/API.md`, `docs/AI.md`,
+  `docs/SECURITY.md`, `docs/ENVIRONMENT.md`, `docs/PRODUCT.md`, `docs/decisions/`.
+  Full enforced law: `apps/api/CLAUDE.md`, `apps/web/CLAUDE.md`.
+- **Area notes:** `context/*.md` for the surface you documented.
+- **Delegate:** `.claude/agents/rules-skills-memory-agent`,
+  `repo-archaeologist` (to verify a claim before you write it), `qa-gatekeeper`.
+
+> If a rule here conflicts with a request, the rule wins. Stop and surface it.
