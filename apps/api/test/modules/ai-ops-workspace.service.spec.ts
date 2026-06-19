@@ -28,18 +28,45 @@ describe('AiOpsWorkspaceService', () => {
       prisma.$queryRaw
         .mockResolvedValueOnce([{ total: BigInt(10), online: BigInt(3) }]) // agents
         .mockResolvedValueOnce([{ total: BigInt(50), success: BigInt(45), failure: BigInt(5) }]) // job runs
-        .mockResolvedValueOnce([{ total: BigInt(120), proposed: BigInt(30), applied: BigInt(60), dismissed: BigInt(25), high_confidence: BigInt(80) }]) // findings
-        .mockResolvedValueOnce([{ total_threads: BigInt(15), total_messages: BigInt(200), legal_hold: BigInt(2) }]) // chat
-        .mockResolvedValueOnce([{ total_tokens: BigInt(500000), estimated_cost: 15.5, requests: BigInt(100) }]) // usage
+        .mockResolvedValueOnce([
+          {
+            total: BigInt(120),
+            proposed: BigInt(30),
+            applied: BigInt(60),
+            dismissed: BigInt(25),
+            high_confidence: BigInt(80),
+          },
+        ]) // findings
+        .mockResolvedValueOnce([
+          { total_threads: BigInt(15), total_messages: BigInt(200), legal_hold: BigInt(2) },
+        ]) // chat
+        .mockResolvedValueOnce([
+          { total_tokens: BigInt(500000), estimated_cost: 15.5, requests: BigInt(100) },
+        ]) // usage
         .mockResolvedValueOnce([{ total: BigInt(300), actors: BigInt(8) }]) // audit
 
       prisma.aiAgentSession.count.mockResolvedValue(25)
       prisma.aiApprovalRequest.count.mockResolvedValue(3)
       prisma.aiExecutionFinding.findMany.mockResolvedValue([
-        { id: 'f1', findingType: 'triage', title: 'Alert finding', status: 'proposed', agentId: 'agent-1', sourceModule: 'alerts', createdAt: new Date() },
+        {
+          id: 'f1',
+          findingType: 'triage',
+          title: 'Alert finding',
+          status: 'proposed',
+          agentId: 'agent-1',
+          sourceModule: 'alerts',
+          createdAt: new Date(),
+        },
       ])
       prisma.aiJobRunSummary.findMany.mockResolvedValue([
-        { id: 'j1', jobKey: 'detection.rule_draft', status: 'completed', agentId: 'agent-2', sourceModule: 'detection', createdAt: new Date() },
+        {
+          id: 'j1',
+          jobKey: 'detection.rule_draft',
+          status: 'completed',
+          agentId: 'agent-2',
+          sourceModule: 'detection',
+          createdAt: new Date(),
+        },
       ])
 
       const result = await service.getWorkspace(TENANT_ID)
@@ -97,24 +124,43 @@ describe('AiOpsWorkspaceService', () => {
       prisma.$queryRaw
         .mockResolvedValueOnce([{ total: BigInt(0), online: BigInt(0) }])
         .mockResolvedValueOnce([{ total: BigInt(0), success: BigInt(0), failure: BigInt(0) }])
-        .mockResolvedValueOnce([{ total: BigInt(0), proposed: BigInt(0), applied: BigInt(0), dismissed: BigInt(0), high_confidence: BigInt(0) }])
-        .mockResolvedValueOnce([{ total_threads: BigInt(0), total_messages: BigInt(0), legal_hold: BigInt(0) }])
-        .mockResolvedValueOnce([{ total_tokens: BigInt(0), estimated_cost: 0, requests: BigInt(0) }])
+        .mockResolvedValueOnce([
+          {
+            total: BigInt(0),
+            proposed: BigInt(0),
+            applied: BigInt(0),
+            dismissed: BigInt(0),
+            high_confidence: BigInt(0),
+          },
+        ])
+        .mockResolvedValueOnce([
+          { total_threads: BigInt(0), total_messages: BigInt(0), legal_hold: BigInt(0) },
+        ])
+        .mockResolvedValueOnce([
+          { total_tokens: BigInt(0), estimated_cost: 0, requests: BigInt(0) },
+        ])
         .mockResolvedValueOnce([{ total: BigInt(0), actors: BigInt(0) }])
 
       prisma.aiAgentSession.count.mockResolvedValue(0)
       prisma.aiApprovalRequest.count.mockResolvedValue(0)
 
       // 10 findings + 10 jobs = 20 total, should be limited to 15
-      const findings = Array.from({ length: 10 }, (_, i) => ({
-        id: `f${String(i)}`, findingType: 'triage', title: `Finding ${String(i)}`,
-        status: 'proposed', agentId: null, sourceModule: null,
-        createdAt: new Date(Date.now() - i * 60000),
+      const findings = Array.from({ length: 10 }, (_, index) => ({
+        id: `f${String(index)}`,
+        findingType: 'triage',
+        title: `Finding ${String(index)}`,
+        status: 'proposed',
+        agentId: null,
+        sourceModule: null,
+        createdAt: new Date(Date.now() - index * 60000),
       }))
-      const jobs = Array.from({ length: 10 }, (_, i) => ({
-        id: `j${String(i)}`, jobKey: `job.${String(i)}`, status: 'completed',
-        agentId: null, sourceModule: null,
-        createdAt: new Date(Date.now() - (i + 5) * 60000),
+      const jobs = Array.from({ length: 10 }, (_, index) => ({
+        id: `j${String(index)}`,
+        jobKey: `job.${String(index)}`,
+        status: 'completed',
+        agentId: null,
+        sourceModule: null,
+        createdAt: new Date(Date.now() - (index + 5) * 60000),
       }))
 
       prisma.aiExecutionFinding.findMany.mockResolvedValue(findings)
@@ -124,10 +170,10 @@ describe('AiOpsWorkspaceService', () => {
 
       expect(result.recentActivity).toHaveLength(15)
       // Verify sorted by createdAt desc
-      for (let i = 1; i < result.recentActivity.length; i++) {
-        const prev = new Date(result.recentActivity[i - 1]!.createdAt).getTime()
-        const curr = new Date(result.recentActivity[i]!.createdAt).getTime()
-        expect(prev).toBeGreaterThanOrEqual(curr)
+      for (let index = 1; index < result.recentActivity.length; index++) {
+        const previous = new Date(result.recentActivity[index - 1]!.createdAt).getTime()
+        const current = new Date(result.recentActivity[index]!.createdAt).getTime()
+        expect(previous).toBeGreaterThanOrEqual(current)
       }
     })
   })

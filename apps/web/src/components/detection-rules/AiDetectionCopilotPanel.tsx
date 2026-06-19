@@ -1,6 +1,7 @@
 'use client'
 
 import { ChevronDown, Loader2, RefreshCw, Settings2, Sparkles, Wand2 } from 'lucide-react'
+import { AiConnectorSelect } from '@/components/common'
 import {
   Badge,
   Button,
@@ -10,7 +11,6 @@ import {
   Separator,
   Textarea,
 } from '@/components/ui'
-import { AiConnectorSelect } from '@/components/common'
 import { cn } from '@/lib/utils'
 import type { AiDetectionCopilotPanelProps, AiDetectionCopilotResult } from '@/types'
 

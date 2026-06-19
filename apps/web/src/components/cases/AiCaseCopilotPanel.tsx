@@ -10,6 +10,7 @@ import {
   RefreshCw,
   Sparkles,
 } from 'lucide-react'
+import { AiConnectorSelect } from '@/components/common'
 import {
   Badge,
   Button,
@@ -18,7 +19,6 @@ import {
   CollapsibleTrigger,
   Separator,
 } from '@/components/ui'
-import { AiConnectorSelect } from '@/components/common'
 import { cn } from '@/lib/utils'
 import type { AiCaseCopilotPanelProps, AiCaseCopilotResult } from '@/types'
 

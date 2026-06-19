@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { Permission } from '@/enums/permission.enum'
 import { MemoryCategory } from '@/enums/memory.enum'
+import { Permission } from '@/enums/permission.enum'
 
 describe('Permission enum - AI Memory values', () => {
   it('AI_MEMORY_VIEW equals ai.memory.view', () => {
@@ -44,8 +44,6 @@ describe('MemoryCategory enum', () => {
 
   it('contains all expected values', () => {
     const values = Object.values(MemoryCategory)
-    expect(values).toEqual(
-      expect.arrayContaining(['fact', 'preference', 'instruction', 'context'])
-    )
+    expect(values).toEqual(expect.arrayContaining(['fact', 'preference', 'instruction', 'context']))
   })
 })

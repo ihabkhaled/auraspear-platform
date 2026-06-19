@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common'
 import { EmbeddingService } from './embedding.service'
-import { getUserMemoryDelegate } from './memory.types'
 import { MemoryRetrievalService } from './memory-retrieval.service'
+import { getUserMemoryDelegate } from './memory.types'
 import { PrismaService } from '../../../prisma/prisma.service'
 import type { RetrievedMemory } from './memory.types'
 

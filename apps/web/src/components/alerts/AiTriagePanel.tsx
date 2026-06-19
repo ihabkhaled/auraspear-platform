@@ -1,6 +1,7 @@
 'use client'
 
 import { Brain, ChevronDown, Loader2, RefreshCw, Shield, Sparkles, Target } from 'lucide-react'
+import { AiConnectorSelect } from '@/components/common'
 import {
   Badge,
   Button,
@@ -9,7 +10,6 @@ import {
   CollapsibleTrigger,
   Separator,
 } from '@/components/ui'
-import { AiConnectorSelect } from '@/components/common'
 import { cn } from '@/lib/utils'
 import type { AiTriagePanelProps, AiTriageResult } from '@/types'
 

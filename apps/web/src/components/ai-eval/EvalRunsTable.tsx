@@ -34,7 +34,7 @@ export function EvalRunsTable({
     {
       key: 'status',
       label: t('runs.status'),
-      render: (value) => {
+      render: value => {
         const status = value as string
         const variant =
           status === 'completed'
@@ -50,7 +50,7 @@ export function EvalRunsTable({
     {
       key: 'avgScore',
       label: t('runs.avgScore'),
-      render: (value) => {
+      render: value => {
         const score = value as number | null
         if (score === null) {
           return '-'
@@ -67,22 +67,24 @@ export function EvalRunsTable({
     {
       key: 'avgLatencyMs',
       label: t('runs.latency'),
-      render: (value) => {
+      render: value => {
         const latency = value as number | null
-        return latency !== null ? `${latency.toFixed(0)}ms` : '-'
+        return latency === null ? '-' : `${latency.toFixed(0)}ms`
       },
     },
     {
       key: 'totalTokens',
       label: t('runs.tokens'),
-      render: (value) => String(value as number),
+      render: value => String(value as number),
     },
     {
       key: 'createdAt',
       label: t('runs.createdAt'),
-      render: (value) => formatTimestamp(value as string),
+      render: value => formatTimestamp(value as string),
     },
   ]
 
-  return <DataTable columns={columns} data={data} loading={loading} emptyMessage={t('runs.empty')} />
+  return (
+    <DataTable columns={columns} data={data} loading={loading} emptyMessage={t('runs.empty')} />
+  )
 }

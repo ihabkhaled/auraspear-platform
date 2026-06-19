@@ -1,8 +1,8 @@
 'use client'
 
+import type { ReactNode } from 'react'
 import { Virtuoso } from 'react-virtuoso'
 import type { VirtuosoProps } from 'react-virtuoso'
-import type { ReactNode } from 'react'
 
 /**
  * Common wrapper around react-virtuoso's Virtuoso component.
@@ -28,11 +28,12 @@ export function VirtualizedList<T>(props: {
   }
 
   if (props.followOutput !== undefined) virtuosoProps['followOutput'] = props.followOutput
-  if (props.initialTopMostItemIndex !== undefined) virtuosoProps['initialTopMostItemIndex'] = props.initialTopMostItemIndex
+  if (props.initialTopMostItemIndex !== undefined)
+    virtuosoProps['initialTopMostItemIndex'] = props.initialTopMostItemIndex
   if (props.endReached !== undefined) virtuosoProps['endReached'] = props.endReached
   if (props.startReached !== undefined) virtuosoProps['startReached'] = props.startReached
   if (props.alignToBottom !== undefined) virtuosoProps['alignToBottom'] = props.alignToBottom
   if (props.components !== undefined) virtuosoProps['components'] = props.components
 
-  return <Virtuoso {...virtuosoProps as VirtuosoProps<T, unknown>} />
+  return <Virtuoso {...(virtuosoProps as VirtuosoProps<T, unknown>)} />
 }

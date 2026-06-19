@@ -1,12 +1,12 @@
 'use client'
 
 import { ChevronLeft, ChevronRight, Download } from 'lucide-react'
-import { CollapsibleSection, LoadingSpinner, PageHeader, SearchInput } from '@/components/common'
 import {
   MemoryGovernanceKpis,
   MemoryGovernanceTable,
   MemoryRetentionPanel,
 } from '@/components/ai-memory'
+import { CollapsibleSection, LoadingSpinner, PageHeader, SearchInput } from '@/components/common'
 import {
   Button,
   Input,

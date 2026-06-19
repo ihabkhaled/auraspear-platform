@@ -1,5 +1,9 @@
-import { resolveExecutionAgent, AGENT_ALIAS_MAP, FEATURE_TO_AGENT_MAP } from '../../src/modules/agent-config/agent-config.constants'
 import { AiAgentId } from '../../src/common/enums/ai-agent-config.enum'
+import {
+  resolveExecutionAgent,
+  AGENT_ALIAS_MAP,
+  FEATURE_TO_AGENT_MAP,
+} from '../../src/modules/agent-config/agent-config.constants'
 
 describe('Agent Alias Map', () => {
   it('should resolve orphaned agents to their core execution agent', () => {
@@ -93,13 +97,33 @@ describe('Finding Quality Gate', () => {
   })
 
   it('should reject placeholder content', () => {
-    expect(isMeaningfulFinding('This is a review result for scheduler:heartbeat — awaiting input from the system to provide meaningful analysis')).toBe(false)
-    expect(isMeaningfulFinding('Unable to analyze without sufficient data. Please provide data for the alert triage operation.')).toBe(false)
-    expect(isMeaningfulFinding('No alerts found in the system for analysis. Waiting for context to proceed with evaluation.')).toBe(false)
+    expect(
+      isMeaningfulFinding(
+        'This is a review result for scheduler:heartbeat — awaiting input from the system to provide meaningful analysis'
+      )
+    ).toBe(false)
+    expect(
+      isMeaningfulFinding(
+        'Unable to analyze without sufficient data. Please provide data for the alert triage operation.'
+      )
+    ).toBe(false)
+    expect(
+      isMeaningfulFinding(
+        'No alerts found in the system for analysis. Waiting for context to proceed with evaluation.'
+      )
+    ).toBe(false)
   })
 
   it('should accept meaningful content', () => {
-    expect(isMeaningfulFinding('Critical alert detected on host 192.168.1.100 with signature matching known malware C2 beacon pattern. Recommend immediate isolation and forensic analysis.')).toBe(true)
-    expect(isMeaningfulFinding('Vulnerability CVE-2024-1234 affects 15 hosts in the production subnet. CVSS score 9.8. Recommend emergency patching within 24 hours.')).toBe(true)
+    expect(
+      isMeaningfulFinding(
+        'Critical alert detected on host 192.168.1.100 with signature matching known malware C2 beacon pattern. Recommend immediate isolation and forensic analysis.'
+      )
+    ).toBe(true)
+    expect(
+      isMeaningfulFinding(
+        'Vulnerability CVE-2024-1234 affects 15 hosts in the production subnet. CVSS score 9.8. Recommend emergency patching within 24 hours.'
+      )
+    ).toBe(true)
   })
 })

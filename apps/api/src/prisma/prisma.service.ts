@@ -1,7 +1,7 @@
 import { Injectable, OnModuleInit, OnModuleDestroy, Logger } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
-import { PrismaClient } from '@prisma/client'
 import { PrismaPg } from '@prisma/adapter-pg'
+import { PrismaClient } from '@prisma/client'
 import {
   MAX_RETRIES,
   BASE_DELAY_MS,

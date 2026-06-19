@@ -1,4 +1,14 @@
-import { Body, Controller, Get, Param, ParseUUIDPipe, Patch, Post, Query, UseGuards } from '@nestjs/common'
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  ParseUUIDPipe,
+  Patch,
+  Post,
+  Query,
+  UseGuards,
+} from '@nestjs/common'
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger'
 import { AiTranscriptService } from './ai-transcript.service'
 import { CurrentUser } from '../../../common/decorators/current-user.decorator'
@@ -36,7 +46,13 @@ export class AiTranscriptController {
     const limit = Math.min(100, Math.max(1, Number.parseInt(rawLimit ?? '25', 10) || 25))
     const offset = Math.max(0, Number.parseInt(rawOffset ?? '0', 10) || 0)
     const holdFilter = legalHold === 'true' ? true : legalHold === 'false' ? false : undefined
-    return this.transcriptService.listThreads(tenantId, { userId, legalHold: holdFilter, search, limit, offset })
+    return this.transcriptService.listThreads(tenantId, {
+      userId,
+      legalHold: holdFilter,
+      search,
+      limit,
+      offset,
+    })
   }
 
   @Get('threads/:id/messages')
@@ -61,7 +77,14 @@ export class AiTranscriptController {
   ): Promise<{ data: AiAuditLog[]; total: number }> {
     const limit = Math.min(100, Math.max(1, Number.parseInt(rawLimit ?? '25', 10) || 25))
     const offset = Math.max(0, Number.parseInt(rawOffset ?? '0', 10) || 0)
-    return this.transcriptService.listAuditLogs(tenantId, { actor, action, from, to, limit, offset })
+    return this.transcriptService.listAuditLogs(tenantId, {
+      actor,
+      action,
+      from,
+      to,
+      limit,
+      offset,
+    })
   }
 
   @Post('threads/:id/legal-hold')
@@ -114,7 +137,8 @@ export class AiTranscriptController {
   async upsertPolicy(
     @TenantId() tenantId: string,
     @CurrentUser('sub') userId: string,
-    @Body() body: {
+    @Body()
+    body: {
       chatRetentionDays: number
       auditRetentionDays: number
       autoRedactPii: boolean
@@ -126,9 +150,7 @@ export class AiTranscriptController {
 
   @Post('cleanup')
   @RequirePermission(Permission.AI_TRANSCRIPT_MANAGE)
-  async runCleanup(
-    @TenantId() tenantId: string
-  ): Promise<{ chats: number; audits: number }> {
+  async runCleanup(@TenantId() tenantId: string): Promise<{ chats: number; audits: number }> {
     return this.transcriptService.cleanupExpiredTranscripts(tenantId)
   }
 }

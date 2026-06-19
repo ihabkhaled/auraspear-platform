@@ -94,13 +94,15 @@ export class AiOpsWorkspaceService {
         where: { tenantId, status: 'pending' },
       }),
       // Findings
-      this.prisma.$queryRaw<Array<{
-        total: bigint
-        proposed: bigint
-        applied: bigint
-        dismissed: bigint
-        high_confidence: bigint
-      }>>`
+      this.prisma.$queryRaw<
+        Array<{
+          total: bigint
+          proposed: bigint
+          applied: bigint
+          dismissed: bigint
+          high_confidence: bigint
+        }>
+      >`
         SELECT
           COUNT(*) AS total,
           COUNT(CASE WHEN status = 'proposed' THEN 1 END) AS proposed,
@@ -111,11 +113,13 @@ export class AiOpsWorkspaceService {
         WHERE tenant_id = ${tenantId}::uuid
       `,
       // Chat
-      this.prisma.$queryRaw<Array<{
-        total_threads: bigint
-        total_messages: bigint
-        legal_hold: bigint
-      }>>`
+      this.prisma.$queryRaw<
+        Array<{
+          total_threads: bigint
+          total_messages: bigint
+          legal_hold: bigint
+        }>
+      >`
         SELECT
           COUNT(*) AS total_threads,
           COALESCE(SUM(message_count), 0) AS total_messages,
@@ -124,11 +128,13 @@ export class AiOpsWorkspaceService {
         WHERE tenant_id = ${tenantId}::uuid
       `,
       // Usage 24h
-      this.prisma.$queryRaw<Array<{
-        total_tokens: bigint
-        estimated_cost: number
-        requests: bigint
-      }>>`
+      this.prisma.$queryRaw<
+        Array<{
+          total_tokens: bigint
+          estimated_cost: number
+          requests: bigint
+        }>
+      >`
         SELECT
           COALESCE(SUM(input_tokens + output_tokens), 0) AS total_tokens,
           COALESCE(SUM(estimated_cost), 0) AS estimated_cost,
@@ -192,16 +198,18 @@ export class AiOpsWorkspaceService {
         sourceModule: f.sourceModule,
         createdAt: f.createdAt,
       })),
-      ...recentJobs.map(j => ({
-        id: j.id,
+      ...recentJobs.map(index => ({
+        id: index.id,
         type: 'job_run' as const,
-        title: j.jobKey,
-        status: j.status,
-        agentId: j.agentId,
-        sourceModule: j.sourceModule,
-        createdAt: j.createdAt,
+        title: index.jobKey,
+        status: index.status,
+        agentId: index.agentId,
+        sourceModule: index.sourceModule,
+        createdAt: index.createdAt,
       })),
-    ].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()).slice(0, 15)
+    ]
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+      .slice(0, 15)
 
     return {
       agents: {

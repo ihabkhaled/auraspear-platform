@@ -1,9 +1,16 @@
 'use client'
 
 import { ChevronLeft, ChevronRight } from 'lucide-react'
-import { CollapsibleSection, LoadingSpinner, PageHeader } from '@/components/common'
 import { HandoffHistoryTable, HandoffKpis } from '@/components/ai-handoffs'
-import { Button, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui'
+import { CollapsibleSection, LoadingSpinner, PageHeader } from '@/components/common'
+import {
+  Button,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui'
 import { useAiHandoffs } from '@/hooks'
 
 export default function AiHandoffsPage() {
@@ -24,7 +31,7 @@ export default function AiHandoffsPage() {
 
   if (!canPromote) {
     return (
-      <div className="flex h-64 items-center justify-center text-muted-foreground">
+      <div className="text-muted-foreground flex h-64 items-center justify-center">
         {t('noAccess')}
       </div>
     )

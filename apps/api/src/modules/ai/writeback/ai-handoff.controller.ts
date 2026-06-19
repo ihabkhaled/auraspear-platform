@@ -8,8 +8,8 @@ import { Permission } from '../../../common/enums'
 import { AuthGuard } from '../../../common/guards/auth.guard'
 import { TenantGuard } from '../../../common/guards/tenant.guard'
 import type { HandoffStats, PromoteResult } from './ai-handoff.service'
-import type { AiFindingOutputLink } from '@prisma/client'
 import type { JwtPayload } from '../../../common/interfaces/authenticated-request.interface'
+import type { AiFindingOutputLink } from '@prisma/client'
 
 @ApiTags('ai-handoffs')
 @ApiBearerAuth()
@@ -23,7 +23,8 @@ export class AiHandoffController {
   async promote(
     @TenantId() tenantId: string,
     @CurrentUser() user: JwtPayload,
-    @Body() body: {
+    @Body()
+    body: {
       findingId: string
       targetModule: string
       title?: string

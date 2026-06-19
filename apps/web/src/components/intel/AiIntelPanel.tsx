@@ -1,6 +1,7 @@
 'use client'
 
 import { ChevronDown, Loader2, RefreshCw, Search, Sparkles, FileText } from 'lucide-react'
+import { AiConnectorSelect } from '@/components/common'
 import {
   Badge,
   Button,
@@ -9,7 +10,6 @@ import {
   CollapsibleTrigger,
   Separator,
 } from '@/components/ui'
-import { AiConnectorSelect } from '@/components/common'
 import type { AiIntelPanelProps, AiIntelResult } from '@/types'
 
 function IntelResultCard({ result, t }: { result: AiIntelResult; t: (key: string) => string }) {

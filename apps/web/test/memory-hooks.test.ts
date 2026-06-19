@@ -48,9 +48,9 @@ vi.mock('react', () => ({
   useCallback: vi.fn((fn: Function) => fn),
 }))
 
-import { memoryService } from '@/services'
 import { Toast } from '@/components/common'
 import { useMemorySettings } from '@/hooks/useMemorySettings'
+import { memoryService } from '@/services'
 
 afterEach(() => {
   vi.clearAllMocks()

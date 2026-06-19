@@ -1,10 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common'
-import {
-  AGENT_ALIAS_MAP,
-  FEATURE_TO_AGENT_MAP,
-} from '../../agent-config/agent-config.constants'
-import { AGENT_DISPLAY_NAMES } from '../../ai/ai.constants'
 import { PrismaService } from '../../../prisma/prisma.service'
+import { AGENT_ALIAS_MAP, FEATURE_TO_AGENT_MAP } from '../../agent-config/agent-config.constants'
+import { AGENT_DISPLAY_NAMES } from '../../ai/ai.constants'
 
 export interface AgentGraphNode {
   agentId: string

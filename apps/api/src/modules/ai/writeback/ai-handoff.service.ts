@@ -1,8 +1,14 @@
 import { Injectable, Logger } from '@nestjs/common'
-import { CaseSeverity, CaseStatus, IncidentCategory, IncidentSeverity, IncidentStatus } from '@prisma/client'
+import {
+  CaseSeverity,
+  CaseStatus,
+  IncidentCategory,
+  IncidentSeverity,
+  IncidentStatus,
+} from '@prisma/client'
 import { BusinessException } from '../../../common/exceptions/business.exception'
-import { buildNextSequenceNumber } from '../../../common/utils/sequence-number.utility'
 import { getYear } from '../../../common/utils/date-time.utility'
+import { buildNextSequenceNumber } from '../../../common/utils/sequence-number.utility'
 import { PrismaService } from '../../../prisma/prisma.service'
 import type { AiExecutionFinding, AiFindingOutputLink } from '@prisma/client'
 
@@ -60,14 +66,18 @@ export class AiHandoffService {
     }
 
     if (finding.status !== 'proposed') {
-      throw new BusinessException(400, 'Only proposed findings can be promoted', 'errors.handoff.invalidStatus')
+      throw new BusinessException(
+        400,
+        'Only proposed findings can be promoted',
+        'errors.handoff.invalidStatus'
+      )
     }
 
     let createdEntityId: string
     let linkedEntityType: string
 
     if (input.targetModule === 'case') {
-      const result = await this.prisma.$transaction(async (tx) => {
+      const result = await this.prisma.$transaction(async tx => {
         const year = getYear()
         const prefix = `SOC-${String(year)}-`
         const latestCase = await tx.case.findFirst({
@@ -94,7 +104,7 @@ export class AiHandoffService {
       linkedEntityType = 'Case'
       this.logger.log(`Promoted finding ${finding.id} to Case ${result.id} (${result.caseNumber})`)
     } else if (input.targetModule === 'incident') {
-      const result = await this.prisma.$transaction(async (tx) => {
+      const result = await this.prisma.$transaction(async tx => {
         const year = getYear()
         const prefix = `INC-${String(year)}-`
         const latestIncident = await tx.incident.findFirst({
@@ -119,9 +129,15 @@ export class AiHandoffService {
       })
       createdEntityId = result.id
       linkedEntityType = 'Incident'
-      this.logger.log(`Promoted finding ${finding.id} to Incident ${result.id} (${result.incidentNumber})`)
+      this.logger.log(
+        `Promoted finding ${finding.id} to Incident ${result.id} (${result.incidentNumber})`
+      )
     } else {
-      throw new BusinessException(400, `Unsupported target module: ${input.targetModule}`, 'errors.handoff.unsupportedTarget')
+      throw new BusinessException(
+        400,
+        `Unsupported target module: ${input.targetModule}`,
+        'errors.handoff.unsupportedTarget'
+      )
     }
 
     // Create the output link
@@ -169,7 +185,13 @@ export class AiHandoffService {
         where: { ...where, finding: findingWhere },
         include: {
           finding: {
-            select: { title: true, findingType: true, severity: true, agentId: true, sourceModule: true },
+            select: {
+              title: true,
+              findingType: true,
+              severity: true,
+              agentId: true,
+              sourceModule: true,
+            },
           },
         },
         orderBy: { createdAt: 'desc' },
@@ -183,7 +205,13 @@ export class AiHandoffService {
 
     const data: HandoffHistoryItem[] = links.map(link => {
       const f = (link as Record<string, unknown>)['finding'] as
-        | { title: string; findingType: string; severity: string | null; agentId: string | null; sourceModule: string | null }
+        | {
+            title: string
+            findingType: string
+            severity: string | null
+            agentId: string | null
+            sourceModule: string | null
+          }
         | undefined
       return {
         id: link.id,

@@ -1,6 +1,7 @@
 'use client'
 
 import { ChevronDown, Loader2, Sparkles } from 'lucide-react'
+import { AiConnectorSelect } from '@/components/common'
 import {
   Badge,
   Button,
@@ -10,7 +11,6 @@ import {
   Separator,
   Textarea,
 } from '@/components/ui'
-import { AiConnectorSelect } from '@/components/common'
 import type { AiSoarPanelProps, AiSoarResult } from '@/types'
 
 function SoarResultCard({ result, t }: { result: AiSoarResult; t: (key: string) => string }) {

@@ -1,6 +1,5 @@
 'use client'
 
-import { PageHeader, LoadingSpinner, CollapsibleSection } from '@/components/common'
 import {
   FinopsBudgetAlertsPanel,
   FinopsCostByFeatureTable,
@@ -9,6 +8,7 @@ import {
   FinopsDailyTrendChart,
   FinopsKpiCards,
 } from '@/components/ai-finops'
+import { PageHeader, LoadingSpinner, CollapsibleSection } from '@/components/common'
 import { useAiFinopsPage } from '@/hooks'
 
 export default function AiFinopsPage() {

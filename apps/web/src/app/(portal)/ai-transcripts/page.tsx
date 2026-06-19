@@ -1,14 +1,21 @@
 'use client'
 
 import { ChevronLeft, ChevronRight, Download } from 'lucide-react'
-import { CollapsibleSection, LoadingSpinner, PageHeader, SearchInput } from '@/components/common'
 import {
   TranscriptAuditTable,
   TranscriptKpis,
   TranscriptPolicyPanel,
   TranscriptThreadsTable,
 } from '@/components/ai-transcripts'
-import { Button, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui'
+import { CollapsibleSection, LoadingSpinner, PageHeader, SearchInput } from '@/components/common'
+import {
+  Button,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui'
 import { useAiTranscripts } from '@/hooks'
 
 export default function AiTranscriptsPage() {
@@ -48,7 +55,7 @@ export default function AiTranscriptsPage() {
 
   if (!canView) {
     return (
-      <div className="flex h-64 items-center justify-center text-muted-foreground">
+      <div className="text-muted-foreground flex h-64 items-center justify-center">
         {t('noAccess')}
       </div>
     )
@@ -70,11 +77,15 @@ export default function AiTranscriptsPage() {
       <PageHeader
         title={t('title')}
         description={t('description')}
-        action={canExport ? {
-          label: t('exportAuditLogs'),
-          icon: <Download className="h-4 w-4" />,
-          onClick: handleExportAuditLogs,
-        } : undefined}
+        action={
+          canExport
+            ? {
+                label: t('exportAuditLogs'),
+                icon: <Download className="h-4 w-4" />,
+                onClick: handleExportAuditLogs,
+              }
+            : undefined
+        }
       />
 
       <TranscriptKpis t={t} stats={stats} />
@@ -96,9 +107,16 @@ export default function AiTranscriptsPage() {
         <div className="space-y-4">
           <div className="flex flex-col gap-3 sm:flex-row">
             <div className="w-full sm:w-64">
-              <SearchInput value={threadSearch} onChange={setThreadSearch} placeholder={t('searchThreads')} />
+              <SearchInput
+                value={threadSearch}
+                onChange={setThreadSearch}
+                placeholder={t('searchThreads')}
+              />
             </div>
-            <Select value={legalHoldFilter || 'all'} onValueChange={v => setLegalHoldFilter(v === 'all' ? '' : v)}>
+            <Select
+              value={legalHoldFilter || 'all'}
+              onValueChange={v => setLegalHoldFilter(v === 'all' ? '' : v)}
+            >
               <SelectTrigger className="w-full sm:w-40">
                 <SelectValue placeholder={t('allThreads')} />
               </SelectTrigger>
@@ -122,11 +140,23 @@ export default function AiTranscriptsPage() {
           />
           {threadPages > 1 && (
             <div className="flex items-center justify-center gap-2">
-              <Button variant="outline" size="sm" disabled={threadPage <= 1} onClick={() => setThreadPage(threadPage - 1)}>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={threadPage <= 1}
+                onClick={() => setThreadPage(threadPage - 1)}
+              >
                 <ChevronLeft className="h-4 w-4" />
               </Button>
-              <span className="text-muted-foreground text-sm">{String(threadPage)} / {String(threadPages)}</span>
-              <Button variant="outline" size="sm" disabled={threadPage >= threadPages} onClick={() => setThreadPage(threadPage + 1)}>
+              <span className="text-muted-foreground text-sm">
+                {String(threadPage)} / {String(threadPages)}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={threadPage >= threadPages}
+                onClick={() => setThreadPage(threadPage + 1)}
+              >
                 <ChevronRight className="h-4 w-4" />
               </Button>
             </div>
@@ -139,11 +169,23 @@ export default function AiTranscriptsPage() {
           <TranscriptAuditTable t={t} data={auditLogs} loading={isFetchingAudit} />
           {auditPages > 1 && (
             <div className="flex items-center justify-center gap-2">
-              <Button variant="outline" size="sm" disabled={auditPage <= 1} onClick={() => setAuditPage(auditPage - 1)}>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={auditPage <= 1}
+                onClick={() => setAuditPage(auditPage - 1)}
+              >
                 <ChevronLeft className="h-4 w-4" />
               </Button>
-              <span className="text-muted-foreground text-sm">{String(auditPage)} / {String(auditPages)}</span>
-              <Button variant="outline" size="sm" disabled={auditPage >= auditPages} onClick={() => setAuditPage(auditPage + 1)}>
+              <span className="text-muted-foreground text-sm">
+                {String(auditPage)} / {String(auditPages)}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={auditPage >= auditPages}
+                onClick={() => setAuditPage(auditPage + 1)}
+              >
                 <ChevronRight className="h-4 w-4" />
               </Button>
             </div>

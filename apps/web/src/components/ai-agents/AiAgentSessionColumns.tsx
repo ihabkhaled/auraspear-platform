@@ -2,12 +2,12 @@
 
 import { Badge } from '@/components/ui'
 import { type AiSessionTrigger } from '@/enums'
-import { formatTimestamp } from '@/lib/dayjs'
 import {
   AI_SESSION_CONNECTOR_LABELS,
   AI_SESSION_TRIGGER_LABEL_KEYS,
   AI_SESSION_TRIGGER_VARIANTS,
 } from '@/lib/constants/ai-agents'
+import { formatTimestamp } from '@/lib/dayjs'
 import { lookup } from '@/lib/utils'
 import type { AiAgentSession, Column, SessionColumnTranslations } from '@/types'
 

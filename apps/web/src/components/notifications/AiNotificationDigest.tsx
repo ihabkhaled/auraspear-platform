@@ -1,15 +1,8 @@
 'use client'
 
 import { Loader2, Sparkles } from 'lucide-react'
-import {
-  Badge,
-  Button,
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui'
 import { AiConnectorSelect } from '@/components/common'
+import { Badge, Button, Card, CardContent, CardHeader, CardTitle } from '@/components/ui'
 import type { AiNotificationDigestProps, AiNotificationDigestResult } from '@/types'
 
 function DigestResultCard({

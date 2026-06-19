@@ -141,7 +141,7 @@ services:
     depends_on:
       wazuh-certs-generator:
         condition: service_completed_successfully
-    entrypoint: ["/bin/sh", "/setup-certs.sh"]
+    entrypoint: ['/bin/sh', '/setup-certs.sh']
     ulimits:
       memlock:
         soft: -1
@@ -170,7 +170,7 @@ services:
     hostname: wazuh-dashboard
     restart: unless-stopped
     user: '0:0'
-    entrypoint: ["/bin/sh", "/setup-certs.sh"]
+    entrypoint: ['/bin/sh', '/setup-certs.sh']
     ports:
       - '5601:443'
     environment:
@@ -247,10 +247,10 @@ services:
       GRAYLOG_ELASTICSEARCH_HOSTS: 'http://graylog-opensearch:9200'
       GRAYLOG_MONGODB_URI: 'mongodb://graylog-mongo:27017/graylog'
     ports:
-      - '9000:9000'       # Web UI + API
-      - '12201:12201'     # GELF TCP
+      - '9000:9000' # Web UI + API
+      - '12201:12201' # GELF TCP
       - '12201:12201/udp' # GELF UDP
-      - '1516:1514/tcp'   # Syslog TCP (remapped to avoid Wazuh 1514 conflict)
+      - '1516:1514/tcp' # Syslog TCP (remapped to avoid Wazuh 1514 conflict)
     volumes:
       - graylog_data:/usr/share/graylog/data
       - graylog_journal:/usr/share/graylog/data/journal
@@ -277,10 +277,10 @@ services:
       API_ENABLED: 'true'
       LOG_LEVEL: info
     ports:
-      - '9600:9600'   # Monitoring API
-      - '5044:5044'   # Beats input
-      - '5140:5140'   # Syslog input
-      - '8088:8088'   # HTTP input
+      - '9600:9600' # Monitoring API
+      - '5044:5044' # Beats input
+      - '5140:5140' # Syslog input
+      - '8088:8088' # HTTP input
     volumes:
       - logstash_data:/usr/share/logstash/data
       - ./config/logstash/pipeline:/usr/share/logstash/pipeline:ro
@@ -471,9 +471,9 @@ services:
       VELOX_PASSWORD: admin
       VELOX_ROLE: administrator
     ports:
-      - '8889:8889'   # GUI
-      - '8001:8001'   # API (Frontend)
-      - '8003:8003'   # Client comms
+      - '8889:8889' # GUI
+      - '8001:8001' # API (Frontend)
+      - '8003:8003' # Client comms
     volumes:
       - velociraptor_data:/velociraptor
     networks:

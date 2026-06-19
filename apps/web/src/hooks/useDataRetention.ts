@@ -2,12 +2,12 @@ import { useCallback, useMemo } from 'react'
 import { useTranslations } from 'next-intl'
 import { Toast } from '@/components/common'
 import { RetentionPeriod } from '@/enums'
-import { buildErrorToastHandler } from '@/lib/toast.utils'
 import {
   DEFAULT_RETENTION,
   RETENTION_KEY_TO_PREF,
   RETENTION_OPTIONS,
 } from '@/lib/constants/settings'
+import { buildErrorToastHandler } from '@/lib/toast.utils'
 import { lookup } from '@/lib/utils'
 import type { DataRetentionConfig } from '@/types'
 import { usePreferences, useUpdatePreferences } from './useSettings'

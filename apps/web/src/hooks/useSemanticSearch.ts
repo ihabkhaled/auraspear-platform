@@ -1,7 +1,7 @@
 'use client'
 
-import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { useTranslations } from 'next-intl'
 import { Permission } from '@/enums'
 import { hasPermission } from '@/lib/permissions'
@@ -40,9 +40,7 @@ export function useSemanticSearch() {
   }
 
   const toggleModule = (mod: string) => {
-    setSelectedModules(prev =>
-      prev.includes(mod) ? prev.filter(m => m !== mod) : [...prev, mod]
-    )
+    setSelectedModules(prev => (prev.includes(mod) ? prev.filter(m => m !== mod) : [...prev, mod]))
   }
 
   return {

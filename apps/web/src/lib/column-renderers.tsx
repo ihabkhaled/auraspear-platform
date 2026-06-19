@@ -1,7 +1,7 @@
+import type { ReactNode } from 'react'
 import { Badge } from '@/components/ui'
 import { BadgeVariant } from '@/enums'
 import { formatTimestamp, lookup } from '@/lib/utils'
-import type { ReactNode } from 'react'
 
 export function renderSeverityBadge(value: unknown): ReactNode {
   const severity = value as string | null
