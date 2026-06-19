@@ -1,0 +1,36 @@
+packages:
+  - apps/*
+  - packages/*
+
+# Deduplicate Zod 4.x to a single version so @hookform/resolvers and the web
+# app's schemas share one set of Zod-4 internal types. Scoped to v4 only — the
+# api app intentionally stays on Zod 3.x (zod@^3.23.0) until a deliberate
+# upgrade milestone, so this override does NOT touch it.
+overrides:
+  zod@4: 4.4.3
+
+# @hookform/resolvers@5 dropped `zod` from its peerDependencies (it consumes
+# Standard Schema). Under pnpm's isolated node_modules that leaves the
+# resolver's internal `import ... from 'zod'` type references unresolvable, so
+# tsc falls back to a default where Zod's internal version is 0 and every
+# `zodResolver(schema)` call fails to type-check. Re-declaring the peer makes
+# pnpm co-locate the app's Zod 4 with the resolver. See ADR-0004.
+packageExtensions:
+  '@hookform/resolvers':
+    peerDependencies:
+      zod: '*'
+
+# Dependencies allowed to run install/build scripts under pnpm 10's
+# secure-by-default build-script policy. Everything else is NOT built.
+onlyBuiltDependencies:
+  - '@prisma/client'
+  - '@prisma/engines'
+  - prisma
+  - esbuild
+
+# Native optional deps intentionally NOT built (carried over from the
+# original frontend workspace — Next.js bundles its own image pipeline and
+# import-x falls back to its JS resolver).
+ignoredBuiltDependencies:
+  - sharp
+  - unrs-resolver
