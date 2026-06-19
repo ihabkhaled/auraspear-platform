@@ -140,8 +140,8 @@ Every "done" claim ships with the command and its real output:
   tail showing success. tsc is the gate; a green `tsgo` is not sufficient.
 - **"No rule violated"** → `lint:strict` output (`--max-warnings 0`). If warnings remain,
   list them and fix; do not silence with a disable comment (#2).
-- **"Fully translated"** → prove the new key exists in **all 6** locale files, e.g.
-  `git grep -l "<namespace>.<key>" apps/web/src/i18n -- '*.json' | wc -l` must print `6`.
+- **"Fully translated"** → prove the new key exists in **all 6** locale JSON files
+  under `apps/web/src/i18n` (grep the dotted key path across them — expect 6 matches).
 - **"Proxy route exists"** → `ls apps/web/src/app/api/<segment>/route.ts` (rule #33).
 - **"Permission gated"** → cite the `canX` derivation in the hook (`path:line`) and the
   `{canX && …}` gate in the `.tsx` (`path:line`).
