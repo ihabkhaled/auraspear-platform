@@ -6,7 +6,7 @@
  * Zero dependencies.
  */
 import { randomBytes } from 'node:crypto'
-import { existsSync, readFileSync, writeFileSync, copyFileSync } from 'node:fs'
+import { constants, copyFileSync, readFileSync, writeFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 
@@ -51,16 +51,22 @@ let created = 0
 for (const { example, env } of TARGETS) {
   const examplePath = join(ROOT, example)
   const envPath = join(ROOT, env)
-  if (!existsSync(examplePath)) {
-    console.log(`  \x1b[33m!\x1b[0m skip ${env} — missing template ${example}`)
-    continue
-  }
-  if (existsSync(envPath) && !force) {
-    console.log(`  \x1b[32m✓\x1b[0m ${env} already exists (use --force to regenerate secrets)`)
-    continue
-  }
-  if (!existsSync(envPath)) {
-    copyFileSync(examplePath, envPath)
+  // Atomically copy the template only when .env does not yet exist (COPYFILE_EXCL
+  // fails with EEXIST instead of overwriting), avoiding a check-then-act race.
+  // If it already exists: without --force we leave it untouched; with --force we
+  // keep the existing file and regenerate secrets in place via fillSecrets below.
+  try {
+    copyFileSync(examplePath, envPath, constants.COPYFILE_EXCL)
+  } catch (err) {
+    if (err.code === 'ENOENT') {
+      console.log(`  \x1b[33m!\x1b[0m skip ${env} — missing template ${example}`)
+      continue
+    }
+    if (err.code === 'EEXIST' && !force) {
+      console.log(`  \x1b[32m✓\x1b[0m ${env} already exists (use --force to regenerate secrets)`)
+      continue
+    }
+    if (err.code !== 'EEXIST') throw err
   }
   const { text, filled } = fillSecrets(readFileSync(envPath, 'utf8'))
   writeFileSync(envPath, text)

@@ -1,4 +1,9 @@
-import { MAX_REMOTE_ERROR_LENGTH, MINIMUM_TIMEOUT_MS, URL_KEYS } from './connectors.constants'
+import {
+  GEMINI_API_HOSTNAME,
+  MAX_REMOTE_ERROR_LENGTH,
+  MINIMUM_TIMEOUT_MS,
+  URL_KEYS,
+} from './connectors.constants'
 import { BedrockModelFamily } from './connectors.enums'
 import { REDACTED_PLACEHOLDER } from '../../common/utils/mask.utility'
 import type {
@@ -404,6 +409,37 @@ export function buildLlmApiHeaders(parameters: LlmApiHeaders): Record<string, st
     headers['OpenAI-Organization'] = parameters.organizationId
   }
   return headers
+}
+
+/**
+ * Determines whether a base URL targets Google's Gemini (generative language) API.
+ *
+ * The check parses the URL and compares the hostname so it cannot be bypassed by
+ * embedding the marker in a path or query (e.g. `https://evil.com/?x=gemini`).
+ * Matches the canonical host (`generativelanguage.googleapis.com`) and any
+ * `*.googleapis.com` subdomain. Non-parseable URLs are treated as non-Gemini.
+ */
+export function isGeminiBaseUrl(baseUrl: string): boolean {
+  if (typeof baseUrl !== 'string') {
+    return false
+  }
+  try {
+    const host = new URL(baseUrl).hostname.toLowerCase()
+    return host === GEMINI_API_HOSTNAME || host.endsWith('.googleapis.com')
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Coerces a possibly-tampered value to a string before it reaches a sink.
+ *
+ * Request/config-derived values may arrive as a non-string type at runtime even
+ * when typed as `string`; using `.length`, indexing, or serialization on such a
+ * value is a type-confusion vector. Non-string inputs normalize to an empty string.
+ */
+export function coerceToString(value: unknown): string {
+  return typeof value === 'string' ? value : ''
 }
 
 /* ---------------------------------------------------------------- */

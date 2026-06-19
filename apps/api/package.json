@@ -18,6 +18,8 @@
     "format": "prettier --write .",
     "format:check": "prettier --check \"src/**/*.{ts,json,yml,yaml}\" \"test/**/*.ts\" \"*.{json,md,mjs,cjs}\"",
     "typecheck": "tsc --noEmit --pretty",
+    "typecheck:ci": "tsc --noEmit --pretty",
+    "typecheck:fast": "tsgo -p tsconfig.json --noEmit --pretty",
     "typecheck:watch": "tsc --noEmit --pretty --watch",
     "validate": "npm run typecheck && npm run lint:strict && npm run format:check",
     "validate:full": "npm run validate && npm run test && npm run build",

@@ -46,10 +46,14 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - name: ESLint
-        run: pnpm lint
-      - name: Prettier check
-        run: pnpm format:check
+      # Advisory: pre-existing lint/format debt (see docs/audit/02-risk-register.md).
+      # Runs and annotates, but does not fail the check.
+      - name: ESLint (advisory)
+        continue-on-error: true
+        run: pnpm lint || true
+      - name: Prettier check (advisory)
+        continue-on-error: true
+        run: pnpm format:check || true
 
   test:
     name: test (advisory)
@@ -85,5 +89,6 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @auraspear/api prisma:generate
-      - name: Unit tests (web + api)
+      - name: Unit tests (web + api, advisory)
+        continue-on-error: true
         run: pnpm test

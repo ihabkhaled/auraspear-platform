@@ -9,7 +9,7 @@
  * All our migration SQL uses IF NOT EXISTS / WHERE NOT EXISTS guards.
  */
 import { readdirSync } from 'node:fs'
-import { execSync } from 'node:child_process'
+import { execFileSync } from 'node:child_process'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -34,9 +34,10 @@ function main() {
   let resolved = 0
   for (const name of entries) {
     try {
-      execSync(`npx prisma migrate resolve --rolled-back ${name}`, {
+      execFileSync('npx', ['prisma', 'migrate', 'resolve', '--rolled-back', name], {
         encoding: 'utf-8',
         stdio: 'pipe', // Suppress output — most will fail with "not failed" which is expected
+        shell: false, // No shell — env-derived migration names cannot be interpreted as commands
       })
       resolved++
       console.log(`[resolve-failed-migrations] Resolved: ${name}`)

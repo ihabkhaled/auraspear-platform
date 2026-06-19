@@ -64,4 +64,6 @@ yarn-error.log*
 
 # ── Misc ──────────────────────────────────────────────────
 .vercel
-.claude/
+# Ignore Claude Code session/local files, but DO commit the project subagents.
+.claude/*
+!.claude/agents/

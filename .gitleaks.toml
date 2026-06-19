@@ -1,0 +1,22 @@
+title = "AuraSpear gitleaks config"
+
+# Use gitleaks' full default ruleset.
+[extend]
+useDefault = true
+
+[allowlist]
+description = """
+The AI-onboarding markdown (.claude/agents, rules, skills, memory, context, docs)
+contains example shell commands and PLACEHOLDER keys (e.g. "<namespace>.<key>",
+"errors.<module>.<key>") that the noisy generic-api-key rule mis-flags. These are
+documentation, never real secrets. Real-secret surfaces — source code, configs,
+Dockerfiles, CI workflows, and .env / .env.example files — are still fully scanned.
+"""
+paths = [
+  '''\.claude/agents/.*\.md$''',
+  '''(^|/)rules/.*\.md$''',
+  '''(^|/)skills/.*\.md$''',
+  '''(^|/)memory/.*\.md$''',
+  '''(^|/)context/.*\.md$''',
+  '''(^|/)docs/.*\.md$''',
+]

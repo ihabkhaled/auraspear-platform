@@ -1,0 +1,142 @@
+---
+description: Frontend rules for apps/web (Next.js 16 / React 19 / Tailwind 4) — components, hooks, services, i18n, AI-UI. Tenant-safe, RBAC-aware, strict TS.
+globs: apps/web/**
+alwaysApply: false
+---
+
+# Frontend rules — apps/web (@auraspear/web)
+
+**Read `AGENTS.md` at the repo root FIRST**, then this file. The full, authoritative
+ruleset (60+ ABSOLUTE rules + every ESLint rule) lives in `apps/web/CLAUDE.md` — when
+in doubt, that file wins. Loading order: `AGENTS.md` → `memory/PROJECT_MEMORY.md` +
+`memory/TECHNICAL_MEMORY.md` → `context/*.md` → `rules/global/*` + `rules/frontend/*` +
+`rules/security/*` + `rules/ai/*` → `skills/frontend/*` → code + tests → **then** edit.
+No agent edits first and understands later.
+
+Stack: Next.js 16 (App Router), React 19 (React Compiler), Tailwind 4 (CSS-first, no
+`tailwind.config.js`), TanStack Query, react-hook-form + Zod, Zustand, next-intl.
+Tooling: pnpm only, Node 22. Blocking typecheck is `pnpm typecheck` (`tsc`); `tsgo`
+(`pnpm typecheck:fast`) is advisory only. Never work on `main` — branch first.
+
+## Non-negotiable (never violate)
+
+- **No `any`. No `eslint-disable` / `@ts-ignore` / `@ts-expect-error`.** Fix the root
+  cause. Both are `error`. No `!` non-null assertion, no `==`/`!=`, no `var`, no
+  `console.log` (only `console.warn`/`console.error`).
+- **Tenant isolation is end-to-end.** The frontend never bypasses it: query keys that
+  hit tenant data include `tenantId`; GLOBAL_ADMIN tenant switch flows through
+  `useTenantStore` (`tenant-storage`) → `X-Tenant-Id` header (Axios interceptor in
+  `@/lib/api`). Never invent a tenant id client-side.
+- **RBAC, never bypassed.** No auth shortcuts in any env. The Next API proxy must NOT
+  forward client `X-Role`/auth headers to the backend — role comes from the validated
+  JWT only. Blocked/deleted users get 401 → `clearAuthAndRedirect()`.
+- **No committed/fallback secrets.** Client env via `process.env['NEXT_PUBLIC_*']`,
+  server-only via `process.env['*']`. Never log tokens/credentials (not in
+  `console.warn`, error handlers, or Zustand devtools). Never store tokens/OSINT keys
+  in `localStorage`; keys go to the backend for AES-256-GCM encrypted storage.
+- **Prove before deleting** any file/dep/env/route/proxy/i18n key (imports, routes,
+  API proxies, Docker, CI, tests). Read → merge → improve, don't overwrite.
+
+## Separation of concerns (ESLint-enforced — `no-restricted-syntax`)
+
+`.tsx` files contain JSX + structure ONLY. They must have **zero hook calls** —
+including `useState`, `useEffect`, `useMemo`, `useTranslations`, `useRouter`, store
+hooks, everything. Extract all logic into a page-level hook.
+
+- Hooks → `src/hooks/` (one per file, barrel `@/hooks`). No `useXxx` in `.tsx`.
+- Types/interfaces → `src/types/<domain>.types.ts` (barrel `@/types`). Banned in
+  `.tsx`, `hooks/`, `services/`, `stores/`, `app/api/`.
+- Enums → `src/enums/` (barrel `@/enums`). **String literal unions are banned** —
+  e.g. use `AlertSeverity.CRITICAL`, never `'critical'`; same in `switch/case`.
+- Constants → `src/lib/constants/<domain>.ts`. SCREAMING_CASE module consts banned
+  in logic files.
+- Pure helpers/mappers/formatters → `src/lib/utils.ts` or `src/lib/<domain>.utils.ts`.
+- Zod schemas → `src/lib/validation/<domain>.schema.ts` (exception: schemas needing
+  `t()` stay in-component since they depend on hook context).
+- **Derived state lives in the hook, not the component** — components receive
+  ready-to-render values via the hook's `useMemo` return.
+
+## Components — use, never rebuild
+
+Barrel imports only — direct `@/components/ui/*` / `@/components/common/*` /
+`@/services/*` / `@/hooks/*` / `@/stores/*` subpaths are banned.
+
+- Tables → `<DataTable>` from `@/components/common` (never raw `<table>`). Sortable
+  columns MUST wire `sortBy`/`sortOrder`/`onSort`; the field must exist in the backend
+  DTO `sortBy` enum + `buildOrderBy`. Pass `isFetching` (not `isLoading`) to `loading`.
+- Forms → shadcn/ui from `@/components/ui` (never raw `<input>`/`<select>`/`<textarea>`).
+  Use `e.currentTarget.value` (not `e.target.value`). Use `useWatch({ control, name })`,
+  never react-hook-form `watch()`.
+- Toasts → `Toast` from `@/components/common` (sonner). Mutation errors:
+  `onError: buildErrorToastHandler(tErrors)` from `@/lib/toast.utils`. Confirm dialogs →
+  `SweetAlertDialog`. Never show raw backend error text — only `t(getErrorKey(error))`.
+- Wrap third-party UI in `@/components/common/` first (e.g. `VirtualizedList`, not
+  `Virtuoso` directly). Dates via `@/lib/dayjs` only (never import `dayjs`).
+
+## Data, services, proxy
+
+- Services = singleton objects calling the Axios instance in `@/lib/api`. Hooks wrap
+  `useQuery`/`useMutation`. **All search/filter/sort/pagination is backend-driven** —
+  never filter client-side; debounce 400ms; reset page to 1 on filter change; use
+  `placeholderData: keepPreviousData`; include every filter param in the query key.
+- **Every backend endpoint the frontend calls needs a matching `src/app/api/.../route.ts`
+  proxy** via `proxyToBackend()` — missing proxies return 404 HTML, not JSON.
+- Adding a permission is a single end-to-end change (backend enum + definitions +
+  defaults + `@RequirePermission` + migration + **frontend enum mirror + proxy + service
+  + hook + UI** + i18n in all 6 locales + seed). See `skills/backend/add-permission.md`.
+
+## Styling
+
+Dark-first, Tailwind 4 `@theme` CSS variables in `src/app/globals.css`. **Never** use
+static semantic colors (`text-red-*`, `bg-gray-*`, `bg-white`, `dark:*`) or `isDark`
+conditionals — use the status/severity system (`text-status-error`,
+`bg-severity-critical`, `text-foreground`, `bg-card`, `border-border`). RTL is built in:
+use logical props (`ps-3`, `me-2`, `text-start`), never `left`/`right`.
+
+## i18n
+
+Every user-facing string goes through `t()` (`useTranslations` client /
+`getTranslations` server) — zero hardcoded text. Add keys to **all 6 locales**
+(`en, es, it, fr, ar, de`) in `src/i18n/` for every scenario (labels, placeholders,
+errors, tooltips, confirms). Backend error keys follow `errors.<module>.<key>`; extract
+with `getErrorKey()` from `@/lib/api-error`. No placeholder/TODO translations.
+
+## AI-UI (analyze/suggest — never silently destroy)
+
+AI may analyze and suggest; **destructive security/infra actions are approval-required**
+and need a persisted approval + permission. The UI must reflect that.
+
+- **Never render raw AI output as HTML** — markdown via a safe renderer or plain text.
+  `dangerouslySetInnerHTML` is banned (`react/no-danger: error`). Transform inter-agent
+  JSON to human-readable before rendering.
+- AI calls go through dedicated `src/hooks/useAi*.ts` hooks (loading/error/permission) —
+  **never call AI services from components or page hooks directly**.
+- Every AI surface shows: loading, error, **confidence**, **provider attribution**, a
+  regenerate affordance, and a dismiss/close (never block the analyst).
+- Label every action with `AiActionCategory` (`analysis-only` / `suggested` /
+  `approval-required` / `auto-allowed`); approval-required shows an approval-status badge.
+- Rich AI blocks (risk gauges, IOC tables, MITRE maps, timelines) use
+  `src/components/ai-renderer/` — no ad-hoc inline rendering.
+- Connector dropdown: render `<AiConnectorSelect />` from `@/components/common` with
+  **zero props** (reads `useAiConnectorStore`); lists fetch from
+  `/api/connectors/ai-available`, never static enum iteration. Use `AiAgentId` /
+  `AiProviderMode` / `AiTriggerMode` enums, never string literals.
+- Never store AI transcripts in `localStorage` (may contain sensitive data) — server-side
+  session only. OSINT/custom-source URLs must pass `isAllowedSourceUrl()` (SSRF) before save.
+
+## Tests & gates
+
+Every new page route needs a Playwright test (loaded / empty / error / responsive).
+Before claiming done, run `pnpm typecheck` (+ `pnpm lint`, `pnpm build`). Never say
+"all green" unless the required gates actually passed.
+
+## Recipes & deeper docs
+
+- Add a page → `skills/frontend/add-page.md`
+- Add an AI panel/surface → `skills/frontend/add-ai-panel.md` (+ `skills/ai/add-ai-feature.md`)
+- Hard rules → `rules/frontend/*`, plus `rules/global/branch-safety.md`,
+  `rules/security/*`, `rules/ai/*`, `rules/testing/quality-gates.md`
+- Stable truths → `memory/PROJECT_MEMORY.md`, `memory/TECHNICAL_MEMORY.md`,
+  `memory/AI_MEMORY.md`, `memory/SECURITY_MEMORY.md`; area notes → `context/*.md`
+- Reference → `docs/ARCHITECTURE.md`, `docs/AI.md`, `docs/SECURITY.md`,
+  `docs/PRODUCT.md`; full frontend law → `apps/web/CLAUDE.md`

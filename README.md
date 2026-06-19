@@ -89,12 +89,17 @@ pnpm dev:api              # api (NestJS, runs prisma migrate + seed first)
 
 ## Documentation
 
-- [Product overview](docs/PRODUCT.md)
-- [Architecture](docs/ARCHITECTURE.md)
-- [Environment variables](docs/ENVIRONMENT.md)
-- [Monorepo migration](docs/MONOREPO_MIGRATION.md)
-- [Architecture Decision Records](docs/decisions/)
-- [Audit & milestone reports](docs/audit/)
+**AI agents & new contributors start here → [`AGENTS.md`](AGENTS.md)** (universal
+entry point; [`CLAUDE.md`](CLAUDE.md), [`CODEX.md`](CODEX.md) inherit from it).
+Central map: **[docs/DOCS_INDEX.md](docs/DOCS_INDEX.md)**.
+
+- [Product overview](docs/PRODUCT.md) · [Business docs](docs/business/) · [Install](INSTALL.md)
+- [Architecture](docs/ARCHITECTURE.md) · [Architecture deep-dives](docs/architecture/) · [API](docs/API.md)
+- [AI architecture & governance](docs/AI.md) · [AI docs](docs/ai/)
+- [Security](docs/SECURITY.md) · [Security docs](docs/security/) · [Environment variables](docs/ENVIRONMENT.md)
+- [Tools & libraries](docs/tools/) · [Testing](docs/TESTING.md)
+- The repo's AI brain: [`rules/`](rules/) · [`skills/`](skills/) · [`memory/`](memory/) · [`context/`](context/) · [`.claude/agents/`](.claude/agents/)
+- [Architecture Decision Records](docs/decisions/) · [Audit & reports](docs/audit/)
 
 ## Security
 

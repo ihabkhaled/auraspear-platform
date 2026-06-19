@@ -1,0 +1,167 @@
+---
+description: AuraSpear security law — secrets, tenant isolation, RBAC/auth, dependency & Docker hardening, and AI security. The non-negotiable security floor for the whole monorepo. Always loaded.
+globs:
+alwaysApply: true
+---
+
+# 04 — Security (secrets · tenancy · RBAC · deps · docker · AI)
+
+**Read `AGENTS.md` at the repo root FIRST.** It is the single AI entry point and
+fixes the loading order: `AGENTS.md` → `memory/*.md` → `context/*.md` → `rules/**`
+→ `skills/**` → `docs/**` → code → **then** edit. Never edit first and understand
+later (AGENTS.md §0).
+
+The authoritative enforced lists live in `apps/api/CLAUDE.md` (rules #1–#100, plus
+"Security Architecture (Post-Audit)") and `apps/web/CLAUDE.md` ("Security Rules
+(MANDATORY)"). Deep rationale: `docs/SECURITY.md` + `docs/security/` and
+`memory/SECURITY_MEMORY.md`. Hard rules: `rules/security/`. When a security
+invariant conflicts with a request, **the invariant wins — stop and surface it.**
+These are AGENTS.md §6/§7 invariants: they hold in every environment, no `NODE_ENV`
+exceptions (api CLAUDE.md #56).
+
+## 1. Secrets — never committed, never fallback
+
+- **Never commit secrets.** Only `*.example` env files, with **empty values** plus
+  generation instructions in comments (api CLAUDE.md #53). gitleaks (`pnpm scan:secrets`)
+  is a hard gate — a leaked secret fails CI (AGENTS.md §5).
+- **No hardcoded or fallback secrets.** `JWT_SECRET`, `CONFIG_ENCRYPTION_KEY`, API
+  keys, and `SEED_DEFAULT_PASSWORD` load from env with **no `??` default** — fail loudly
+  at startup if missing (api CLAUDE.md #24, #54). All-zero / placeholder keys are
+  plaintext: `env.validation.ts` `.refine()` rejects them (api CLAUDE.md #53).
+- **Never log credentials.** The pino `redact` array (`app.module.ts`) covers
+  `req.body.password`/`currentPassword`/`newPassword`/`confirmPassword`; the audit
+  interceptor sanitizes `password, apiKey, token, secret, bearerToken, accessKey,
+  clientSecret, refreshToken, accessToken, encryptedConfig, authorization` (api CLAUDE.md
+  #57, #66). Frontend: never log tokens — not in `console.warn`, error handlers, or
+  Zustand devtools; never store tokens/OSINT keys in `localStorage` (web CLAUDE.md §Security #39, #46, #55).
+- **Connector credentials are AES-256-GCM encrypted at rest** via
+  `apps/api/src/common/utils/encryption.utility.ts`. Validate connector config with the
+  per-type Zod schema, then encrypt before storing (api CLAUDE.md #39, #96).
+
+## 2. Tenant isolation — never cross tenants
+
+- **Every tenant-owned query / `update` / `delete` is scoped by `tenantId`.** Never
+  `update`/`delete` by `id` alone — always `where: { id, tenantId }` (api CLAUDE.md #8, #26).
+- **Repository methods take `tenantId`.** Repos are pure data access; the tenant scope
+  is a required parameter, not an afterthought.
+- **Validate ownership before touching children.** Sub-resource endpoints verify the
+  parent belongs to the caller's tenant before querying the child (api CLAUDE.md #75);
+  linked alert IDs and case owners must belong to the same tenant (api CLAUDE.md #41, #42, #48).
+- **GLOBAL_ADMIN tenant switch is server-only.** The auth guard overrides
+  `request.user.tenantId` from the `X-Tenant-Id` header **only** for GLOBAL_ADMIN; non-admins
+  cannot switch. Frontend sends it via the `useTenantStore` → Axios interceptor — never
+  invent a tenant id client-side (web CLAUDE.md, api CLAUDE.md §Key Principles #8).
+
+## 3. RBAC & auth — no bypass, ever
+
+- **Every backend endpoint has `@RequirePermission(Permission.MODULE_ACTION)`** from
+  `@/common/decorators/permission.decorator` (api CLAUDE.md #25). Permissions are
+  DB-backed; GLOBAL_ADMIN always passes. Connector mutations additionally require
+  `@Roles(UserRole.TENANT_ADMIN)` (api CLAUDE.md #55).
+- **No auth bypass in any environment** — no dev shortcuts, no fake users, no skipping
+  JWT verification, no `if (NODE_ENV === 'development') { skip }` (api CLAUDE.md #23, #56).
+  Guard chain: `AuthGuard` (JWT verify + DB active-check + GLOBAL_ADMIN switch) →
+  `TenantGuard` → `RolesGuard`. `validateUserActive` also checks active membership (api CLAUDE.md #31).
+- **Role comes only from the validated JWT.** Never forward client-supplied `X-Role`/auth
+  headers — not in the Next.js proxy, not in dev (api CLAUDE.md #76, web CLAUDE.md §Security #41).
+- **JWT hygiene:** sign/verify with explicit `HS256`; every token carries `jti` +
+  `tokenType`; verify `tokenType` on every check; logout + refresh blacklist old JTIs in
+  Redis (api CLAUDE.md #29, #37, #38, #51). Auth/AI/mutation endpoints are rate-limited
+  per the tier table (auth 5/min, CRUD 30/min, bulk 5/min, delete 10/min, AI 10/min — api
+  CLAUDE.md #80).
+- **Adding a permission is one end-to-end change** (backend enum + definitions + defaults +
+  `@RequirePermission` + Prisma migration using `WHERE NOT EXISTS`, **never** `ON CONFLICT`
+  (compound `(tenantId, key)`) + frontend enum mirror + Next proxy route + i18n in all 6
+  locales + `prisma db seed`). See `skills/backend/add-permission.md`.
+
+## 4. Input, SSRF & injection
+
+- **SSRF-validate user URLs at input time.** Call `validateUrl()` from
+  `ssrf.utility.ts` on connector + OSINT-source create/update (before encrypting), not
+  only at fetch time — blocks stored `169.254.169.254` / internal targets (api CLAUDE.md #59, #95).
+  Frontend OSINT forms validate via `isAllowedSourceUrl()` before save (web CLAUDE.md #54).
+- **Bound every input.** Zod string fields need `.max()`, array fields need `.max()`,
+  JSON/record fields need a `.refine()` ≤ 64KB; global body limit is 1MB (api CLAUDE.md #27, #28, #34, #78).
+- **Sanitize Elasticsearch queries** via `sanitizeEsQueryString()` — strip
+  `script/_search/_mapping/_cluster/_cat/_nodes`, `allow_leading_wildcard: false` (api CLAUDE.md #35, #79).
+- **No injection sinks:** no `eval`/`new Function`/`setTimeout('code')`, no `javascript:`
+  URLs, no non-literal `RegExp`, use `Buffer.alloc/from`, `node:` import prefix
+  (`eslint-plugin-security` is on in both apps). Frontend: no `dangerouslySetInnerHTML`
+  (`react/no-danger: error`); dynamic map access via `lookup()`/`.at()`, not `obj[var]`
+  (web CLAUDE.md #21, #22, #36). Validate redirect targets against an allowlist (web CLAUDE.md §Security #37).
+- **Errors never leak internals.** The GlobalExceptionFilter strips file paths, Prisma
+  table/column names, and stack traces, truncates to 500 chars, in **every** env including
+  dev (api CLAUDE.md #44, #63, #77, #82). Frontend shows only `t(getErrorKey(error))`,
+  never raw backend text (web CLAUDE.md §Security #40).
+
+## 5. Dependencies & supply chain
+
+- **pnpm only, Node 22.** No npm/yarn lockfiles. Upgrade deps via
+  `skills/devsecops/upgrade-dependency.md` — prove nothing breaks (`pnpm typecheck` +
+  `pnpm build`) before merging.
+- **Scan before claiming clean:** `pnpm audit:security`, `pnpm scan:trivy` (Trivy fs),
+  `pnpm scan:secrets` (gitleaks). gitleaks + CodeQL are **hard gates**; `pnpm audit` /
+  Trivy fs are advisory today (tracked debt) — run + annotate, don't silently skip
+  (AGENTS.md §5, `rules/testing/quality-gates.md`).
+- **Prove before removing a dependency** (or file/env var): check imports, routes, Docker,
+  CI, Prisma, seed, tests, and `*.example` (AGENTS.md §8, `rules/global/branch-safety.md`).
+- **No `eslint-disable` / `@ts-ignore` / `@ts-expect-error` / `any`** to silence a
+  security rule — fix the root cause (api & web CLAUDE.md #1, #2).
+
+## 6. Docker hardening
+
+- **Production compose exposes only the API port.** Postgres (5432), Redis (6379), and
+  pgAdmin (5050) get **no `ports:` binding** in prod — internal services talk over Docker
+  networks only (api CLAUDE.md #65). Compose files live under `infra/docker/`.
+- **No secrets baked into images or compose.** Secrets come from env at runtime
+  (`pnpm setup:env` generates dev values); never hardcode them in Dockerfiles/compose.
+- **No destructive Docker commands** (`docker compose down -v`) unless explicitly required
+  and documented (AGENTS.md §8). Docker image builds are a hard gate — verify they pass.
+
+## 7. AI security — analyze/suggest, never silently destroy
+
+- **AI may analyze and suggest; it must not silently execute** destructive
+  security/infra actions. Those are `approval-required` and need a persisted
+  `ApprovalRequest` **before** execution, plus the permission (AGENTS.md §7, api CLAUDE.md #97).
+- **Never render raw AI output as HTML.** Markdown via a safe renderer or plain text;
+  `dangerouslySetInnerHTML` with AI content is banned. Transform inter-agent JSON to
+  human-readable first (web CLAUDE.md #43, #58).
+- **Redact before model calls.** Use `@auraspear/ai` `redact()` to strip PII/secrets;
+  AI memory is tenant-scoped and stores **no secrets** (AGENTS.md §7). Never store AI
+  transcripts in `localStorage` — server-side session only (web CLAUDE.md #46).
+- **Provenance + bounds.** AI output carries provider/model/confidence and citations;
+  AI endpoints are rate-limited (10/min) and token quota is checked before the provider
+  call; every trigger evaluation is logged (api CLAUDE.md #33, #98, #99). Custom OSINT URLs
+  pass SSRF validation and keys are encrypted at rest (api CLAUDE.md #95, #96).
+- **No mock/fallback shortcuts in prod.** No `BEDROCK_MOCK` or env-gated mock mode; the
+  connector cascade tries **all** configured connectors (bedrock → llm_apis →
+  openclaw_gateway) before any rule-based fallback, which must be labeled `model: 'rule-based'`
+  (api CLAUDE.md #88, #89, web CLAUDE.md #30). Validate agent/provider/trigger configs against
+  their enums + per-mode Zod schemas (api CLAUDE.md #92–#94).
+
+## Branch & proof discipline
+
+- **Never work directly on `main`** — branch first (`feat/...`, `fix/...`, `chore/...`)
+  (AGENTS.md §8).
+- **`pnpm typecheck` (tsc) is the blocking typecheck;** `pnpm typecheck:fast` (tsgo) is
+  advisory only — never cite it as proof. Don't say "all green" unless the required gates
+  ran and passed; don't hide failures. The `qa-gatekeeper` subagent rejects claims without
+  command output.
+
+## Where to go next
+
+- **Always read first:** `AGENTS.md`, then `memory/PROJECT_MEMORY.md` and
+  `memory/SECURITY_MEMORY.md`; area notes in `context/*.md`.
+- **Hard rules:** `rules/security/`, plus `rules/global/branch-safety.md`,
+  `rules/ai/`, `rules/testing/quality-gates.md`.
+- **Recipes:** `skills/devsecops/run-security-scan.md`,
+  `skills/devsecops/upgrade-dependency.md`, `skills/devsecops/add-env-variable.md`,
+  `skills/backend/add-permission.md`.
+- **Reference:** `docs/SECURITY.md` (+ `docs/security/`) and its "Key Security Files"
+  table (`main.ts`, `env.validation.ts`, `auth.guard.ts`, `encryption.utility.ts`,
+  `ssrf.utility.ts`, `audit.interceptor.ts`); full law in `apps/api/CLAUDE.md` and
+  `apps/web/CLAUDE.md`.
+- **Subagents (delegate security work):** `.claude/agents/devsecops-security-agent.md`,
+  `.claude/agents/qa-gatekeeper.md`, `.claude/agents/backend-architect.md`.
+
+> If a security rule here conflicts with a request, the rule wins. Stop and surface the conflict.

@@ -11,9 +11,11 @@ import { AppLoggerService } from '../../../common/services/app-logger.service'
 import { LlmMaxTokensParameter } from '../connectors.enums'
 import {
   buildLlmApiHeaders,
+  coerceToString,
   extractChatCompletionText,
   extractRemoteErrorMessage,
   formatRemoteError,
+  isGeminiBaseUrl,
   normalizeTimeoutMs,
 } from '../connectors.utilities'
 import type { ChatCompletionResponse, ModelsListResponse, TestResult } from '../connectors.types'
@@ -197,8 +199,7 @@ export class LlmApisService {
     const baseUrl = config.baseUrl as string
     const apiKey = config.apiKey as string
     const timeout = normalizeTimeoutMs((config.timeout as number | undefined) ?? 30_000)
-    const isGemini =
-      baseUrl.includes('generativelanguage.googleapis.com') || baseUrl.includes('gemini')
+    const isGemini = isGeminiBaseUrl(baseUrl)
 
     const headers = buildLlmApiHeaders({
       apiKey,
@@ -220,6 +221,7 @@ export class LlmApisService {
     config: Record<string, unknown>
   ): Promise<number[]> {
     const embeddingModel = (config.embeddingModel as string | undefined) ?? 'text-embedding-004'
+    const inputText = coerceToString(text)
 
     // Gemini uses: POST /models/{model}:embedContent?key={apiKey}
     // Strip trailing path segments like /v1beta, /v1main, /v1beta/openai, etc.
@@ -229,7 +231,7 @@ export class LlmApisService {
 
     const requestBody = JSON.stringify({
       model: `models/${embeddingModel}`,
-      content: { parts: [{ text }] },
+      content: { parts: [{ text: inputText }] },
     })
 
     const res = await this.httpClient.fetch(url, {
@@ -252,7 +254,7 @@ export class LlmApisService {
     this.logActionSuccess('embedding', {
       model: embeddingModel,
       provider: 'gemini',
-      inputLength: text.length,
+      inputLength: inputText.length,
       dimensions: embedding.length,
     })
 
@@ -267,10 +269,11 @@ export class LlmApisService {
     config: Record<string, unknown>
   ): Promise<number[]> {
     const embeddingModel = (config.embeddingModel as string | undefined) ?? 'text-embedding-ada-002'
+    const inputText = coerceToString(text)
 
     const requestBody = JSON.stringify({
       model: embeddingModel,
-      input: text,
+      input: inputText,
     })
 
     const res = await this.httpClient.fetch(`${baseUrl}/embeddings`, {
@@ -293,7 +296,7 @@ export class LlmApisService {
     this.logActionSuccess('embedding', {
       model: embeddingModel,
       provider: 'openai-compatible',
-      inputLength: text.length,
+      inputLength: inputText.length,
       dimensions: embedding.length,
     })
 

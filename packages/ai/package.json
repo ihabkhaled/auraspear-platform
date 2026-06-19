@@ -20,6 +20,8 @@
   "types": "./src/index.ts",
   "scripts": {
     "typecheck": "tsc --noEmit --pretty",
+    "typecheck:ci": "tsc --noEmit --pretty",
+    "typecheck:fast": "tsgo -p tsconfig.json --noEmit --pretty",
     "lint": "echo \"(ai) lint via consumers\"",
     "lint:strict": "echo \"(ai) lint via consumers\""
   }

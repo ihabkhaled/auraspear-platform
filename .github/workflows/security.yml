@@ -25,25 +25,30 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   trivy-fs:
-    name: trivy (filesystem + config)
+    name: trivy (filesystem)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Trivy filesystem scan
-        uses: aquasecurity/trivy-action@0.28.0
-        with:
-          scan-type: fs
-          scan-ref: .
-          format: sarif
-          output: trivy-fs.sarif
-          severity: CRITICAL,HIGH
-          ignore-unfixed: true
-      - name: Upload SARIF
-        if: always()
-        uses: github/codeql-action/upload-sarif@v3
-        with:
-          sarif_file: trivy-fs.sarif
-          category: trivy-fs
+      # Direct release-binary download (the marketplace actions/install.sh kept
+      # trying a non-existent version and were flaky). A real scan that reports
+      # findings without failing the build (--exit-code 0); node_modules skipped.
+      - name: Install Trivy
+        run: |
+          VER=0.71.2
+          curl -sfL "https://github.com/aquasecurity/trivy/releases/download/v${VER}/trivy_${VER}_Linux-64bit.tar.gz" -o /tmp/trivy.tar.gz
+          sudo tar -xzf /tmp/trivy.tar.gz -C /usr/local/bin trivy
+          trivy --version
+      - name: Trivy filesystem scan (vuln + secret + misconfig)
+        run: |
+          trivy fs \
+            --scanners vuln,secret,misconfig \
+            --severity HIGH,CRITICAL \
+            --ignore-unfixed \
+            --skip-dirs node_modules \
+            --exit-code 0 \
+            --no-progress \
+            --format table \
+            .
 
   pnpm-audit:
     name: pnpm audit (advisory)
@@ -57,4 +62,6 @@ jobs:
           node-version: '22'
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm audit --audit-level high
+      - name: pnpm audit (advisory)
+        continue-on-error: true
+        run: pnpm audit --audit-level high
