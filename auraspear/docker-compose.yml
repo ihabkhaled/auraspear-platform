@@ -1,0 +1,11 @@
+services:
+  frontend:
+    image: auraspear/frontend:latest
+    container_name: auraspear-frontend
+    restart: unless-stopped
+    ports:
+      - '${FRONTEND_PORT:-3000}:3000'
+    env_file: .env
+    environment:
+      NODE_ENV: production
+      BACKEND_API_URL: ${BACKEND_API_URL:-http://host.docker.internal:4000/api/v1}

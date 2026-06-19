@@ -1,0 +1,22 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+coverage/
+
+# Generated files
+prisma/migrations/
+package-lock.json
+pnpm-lock.yaml
+
+# Reports
+eslint-reports/
+
+# IDE
+.vscode/
+.idea/
+
+# Docker
+Dockerfile
+docker-compose*.yml

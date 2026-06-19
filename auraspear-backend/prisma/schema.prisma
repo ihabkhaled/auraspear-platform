@@ -1,0 +1,2745 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "rhel-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── Enums ───────────────────────────────────────────────────
+
+enum UserRole {
+  GLOBAL_ADMIN
+  PLATFORM_OPERATOR
+  TENANT_ADMIN
+  DETECTION_ENGINEER
+  INCIDENT_RESPONDER
+  THREAT_INTEL_ANALYST
+  SOAR_ENGINEER
+  THREAT_HUNTER
+  SOC_ANALYST_L2
+  SOC_ANALYST_L1
+  EXECUTIVE_READONLY
+  AUDITOR_READONLY
+}
+
+enum ConnectorType {
+  wazuh
+  graylog
+  logstash
+  velociraptor
+  grafana
+  influxdb
+  misp
+  shuffle
+  bedrock
+  llm_apis
+  openclaw_gateway
+}
+
+enum AuthType {
+  basic
+  api_key
+  token
+  iam
+}
+
+enum RefreshTokenFamilyStatus {
+  active
+  revoked
+  expired
+}
+
+enum RefreshTokenRotationStatus {
+  active
+  used
+  revoked
+  replayed
+}
+
+enum CaseStatus {
+  open
+  in_progress
+  closed
+}
+
+enum CaseSeverity {
+  critical
+  high
+  medium
+  low
+}
+
+enum AlertSeverity {
+  critical
+  high
+  medium
+  low
+  info
+}
+
+enum AlertStatus {
+  new_alert
+  acknowledged
+  in_progress
+  resolved
+  closed
+  false_positive
+}
+
+enum HuntSessionStatus {
+  running
+  completed
+  error
+}
+
+enum CaseCycleStatus {
+  active
+  closed
+}
+
+enum UserStatus {
+  active
+  inactive
+  suspended
+}
+
+// ─── Incident Enums ─────────────────────────────────────────
+
+enum IncidentSeverity {
+  critical
+  high
+  medium
+  low
+}
+
+enum IncidentStatus {
+  open
+  in_progress
+  contained
+  resolved
+  closed
+}
+
+enum IncidentCategory {
+  intrusion
+  insider
+  brute_force
+  exfiltration
+  malware
+  cloud
+  phishing
+  dos
+  other
+}
+
+enum IncidentActorType {
+  user
+  ai_agent
+  system
+}
+
+// ─── Correlation Enums ──────────────────────────────────────
+
+enum RuleSource {
+  sigma
+  custom
+  ai_generated
+}
+
+enum RuleSeverity {
+  critical
+  high
+  medium
+  low
+  info
+}
+
+enum RuleStatus {
+  active
+  review
+  disabled
+}
+
+// ─── Vulnerability Enums ────────────────────────────────────
+
+enum PatchStatus {
+  patch_pending
+  patching
+  mitigated
+  scheduled
+  not_applicable
+}
+
+enum VulnerabilitySeverity {
+  critical
+  high
+  medium
+  low
+  info
+}
+
+// ─── AI Agent Enums ─────────────────────────────────────────
+
+enum AiAgentStatus {
+  online
+  offline
+  degraded
+  maintenance
+}
+
+enum AiAgentTier {
+  L0
+  L1
+  L2
+  L3
+}
+
+enum AiAgentSessionStatus {
+  running
+  completed
+  failed
+  cancelled
+}
+
+// ─── UEBA Enums ─────────────────────────────────────────────
+
+enum UebaEntityType {
+  user
+  host
+  service_account
+  application
+}
+
+enum UebaRiskLevel {
+  critical
+  high
+  medium
+  low
+  normal
+}
+
+enum MlModelStatus {
+  training
+  active
+  degraded
+  inactive
+}
+
+enum MlModelType {
+  anomaly_detection
+  classification
+  clustering
+  time_series
+}
+
+// ─── Attack Path Enums ──────────────────────────────────────
+
+enum AttackPathSeverity {
+  critical
+  high
+  medium
+  low
+}
+
+enum AttackPathStatus {
+  active
+  mitigated
+  resolved
+}
+
+// ─── SOAR Enums ───────────────────────────────────────────────
+
+enum SoarPlaybookStatus {
+  active
+  inactive
+  draft
+}
+
+enum SoarTriggerType {
+  manual
+  alert
+  incident
+  scheduled
+}
+
+enum SoarExecutionStatus {
+  running
+  completed
+  failed
+  cancelled
+}
+
+// ─── Compliance Enums ─────────────────────────────────────────
+
+enum ComplianceStandard {
+  iso_27001
+  nist
+  pci_dss
+  soc2
+  hipaa
+  gdpr
+}
+
+enum ComplianceControlStatus {
+  passed
+  failed
+  not_assessed
+  partially_met
+}
+
+// ─── Report Enums ─────────────────────────────────────────────
+
+enum ReportType {
+  executive
+  compliance
+  incident
+  threat
+  custom
+}
+
+enum ReportFormat {
+  pdf
+  csv
+  html
+}
+
+enum ReportStatus {
+  generating
+  completed
+  failed
+}
+
+enum ReportModule {
+  dashboard
+  alerts
+  incidents
+  cases
+  vulnerabilities
+  compliance
+  ai_agents
+  soar
+  connectors
+  system_health
+}
+
+enum ReportTemplateKey {
+  executive_overview
+  incident_posture
+  threat_exposure
+  vulnerability_exposure
+  compliance_posture
+  automation_health
+  connector_health
+}
+
+enum DashboardDensity {
+  compact
+  comfortable
+  expanded
+}
+
+enum DashboardPanelKey {
+  overview
+  threat_operations
+  automation
+  governance
+  infrastructure
+  alert_trends
+  severity_distribution
+  mitre_techniques
+  targeted_assets
+  report_templates
+  ai_canvas
+  recent_activity
+  connector_sync
+  rule_performance
+  runtime_backlog
+  automation_quality
+  exposure_summary
+  incident_status
+  operations
+  case_aging
+}
+
+enum UserSessionStatus {
+  active
+  revoked
+  expired
+}
+
+enum UserSessionOsFamily {
+  windows
+  macos
+  linux
+  ios
+  android
+  ipados
+  unknown
+}
+
+enum UserSessionClientType {
+  desktop
+  mobile
+  tablet
+  web
+  unknown
+}
+
+// ─── System Health Enums ──────────────────────────────────────
+
+enum ServiceType {
+  connector
+  database
+  api
+  queue
+  storage
+}
+
+enum ServiceStatus {
+  healthy
+  degraded
+  down
+  unknown
+}
+
+enum MetricType {
+  cpu
+  memory
+  disk
+  network
+  queue_depth
+  latency
+}
+
+// ─── Normalization Enums ──────────────────────────────────────
+
+enum NormalizationSourceType {
+  syslog
+  json
+  csv
+  cef
+  leef
+  custom
+}
+
+enum NormalizationPipelineStatus {
+  active
+  inactive
+  error
+}
+
+// ─── Detection Rule Enums ─────────────────────────────────────
+
+enum DetectionRuleType {
+  threshold
+  anomaly
+  chain
+  scheduled
+}
+
+enum DetectionRuleSeverity {
+  critical
+  high
+  medium
+  low
+  info
+}
+
+enum DetectionRuleStatus {
+  active
+  testing
+  disabled
+}
+
+// ─── Cloud Security Enums ─────────────────────────────────────
+
+enum CloudProvider {
+  aws
+  azure
+  gcp
+  oci
+}
+
+enum CloudAccountStatus {
+  connected
+  disconnected
+  error
+}
+
+enum CloudFindingSeverity {
+  critical
+  high
+  medium
+  low
+  info
+}
+
+enum CloudFindingStatus {
+  open
+  resolved
+  suppressed
+}
+
+// ─── Tenants ─────────────────────────────────────────────────
+
+model Tenant {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String   @db.VarChar(255)
+  slug      String   @unique @db.VarChar(100)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  memberships      TenantMembership[]
+  connectorConfigs ConnectorConfig[]
+  caseCycles       CaseCycle[]
+  cases            Case[]
+  auditLogs        AuditLog[]
+  aiAuditLogs      AiAuditLog[]
+  savedQueries     SavedQuery[]
+  alerts           Alert[]
+  intelIocs        IntelIOC[]
+  intelMispEvents  IntelMispEvent[]
+  huntSessions         HuntSession[]
+  logstashPipelineLogs LogstashPipelineLog[]
+  incidents            Incident[]
+  correlationRules     CorrelationRule[]
+  vulnerabilities      Vulnerability[]
+  aiAgents             AiAgent[]
+  uebaEntities         UebaEntity[]
+  uebaAnomalies        UebaAnomaly[]
+  mlModels             MlModel[]
+  attackPaths          AttackPath[]
+  soarPlaybooks        SoarPlaybook[]
+  soarExecutions       SoarExecution[]
+  complianceFrameworks ComplianceFramework[]
+  reports              Report[]
+  reportTemplates      ReportTemplate[]
+  systemHealthChecks      SystemHealthCheck[]
+  systemMetrics           SystemMetric[]
+  normalizationPipelines  NormalizationPipeline[]
+  detectionRules          DetectionRule[]
+  cloudAccounts           CloudAccount[]
+  cloudFindings           CloudFinding[]
+  rolePermissions         RolePermission[]
+  permissionDefinitions   PermissionDefinition[]
+  jobs                    Job[]
+  refreshTokenFamilies    RefreshTokenFamily[]
+  userSessions            UserSession[]
+  llmConnectors           LlmConnector[]
+  aiPromptTemplates       AiPromptTemplate[]
+  aiFeatureConfigs        AiFeatureConfig[]
+  aiUsageLedger           AiUsageLedger[]
+  runbooks                Runbook[]
+  entities                Entity[]
+  entityRelations         EntityRelation[]
+  tenantAgentConfigs      TenantAgentConfig[]
+  osintSourceConfigs      OsintSourceConfig[]
+  aiApprovalRequests      AiApprovalRequest[]
+  aiExecutionFindings     AiExecutionFinding[]
+  aiAgentSchedules        AiAgentSchedule[]
+  aiFindingOutputLinks    AiFindingOutputLink[]
+  aiJobRunSummaries       AiJobRunSummary[]
+  aiChatThreads           AiChatThread[]
+  aiChatMessages          AiChatMessage[]
+  userMemories            UserMemory[]
+  aiCostRates             AiCostRate[]
+  aiBudgetAlerts          AiBudgetAlert[]
+  memoryRetentionPolicy   MemoryRetentionPolicy?
+  aiTranscriptPolicy      AiTranscriptPolicy?
+  aiEvalSuites            AiEvalSuite[]
+  aiEvalRuns              AiEvalRun[]
+  aiSimulations           AiSimulation[]
+
+  @@map("tenants")
+}
+
+// ─── Permission Definitions ──────────────────────────────────
+
+model PermissionDefinition {
+  id          String   @id @default(uuid()) @db.Uuid
+  tenantId    String?  @map("tenant_id") @db.Uuid
+  key         String   @db.VarChar(100)
+  module      String   @db.VarChar(50)
+  labelKey    String   @map("label_key") @db.VarChar(150)
+  sortOrder   Int      @default(0) @map("sort_order")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  tenant      Tenant?  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, key])
+  @@index([tenantId])
+  @@index([module])
+  @@map("permission_definitions")
+}
+
+// ─── Role Permissions ────────────────────────────────────────
+
+model RolePermission {
+  id            String   @id @default(uuid()) @db.Uuid
+  tenantId      String   @map("tenant_id") @db.Uuid
+  role          UserRole
+  permissionKey String   @map("permission_key") @db.VarChar(100)
+  allowed       Boolean  @default(false)
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, role, permissionKey])
+  @@index([tenantId, role])
+  @@map("role_permissions")
+}
+
+// ─── Users ───────────────────────────────────────────────────
+
+model User {
+  id           String    @id @default(uuid()) @db.Uuid
+  email        String    @unique @db.VarChar(320)
+  name         String    @db.VarChar(255)
+  passwordHash String?   @map("password_hash") @db.VarChar(255)
+  oidcSub      String?   @unique @map("oidc_sub") @db.VarChar(255)
+  mfaEnabled   Boolean   @default(false) @map("mfa_enabled")
+  isProtected  Boolean   @default(false) @map("is_protected")
+  lastLoginAt  DateTime? @map("last_login_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  memberships TenantMembership[]
+  preference  UserPreference?
+  refreshTokenFamilies RefreshTokenFamily[]
+  sessions             UserSession[]
+  aiChatThreads        AiChatThread[]
+  userMemories         UserMemory[]
+
+  @@map("users")
+}
+
+// ─── Tenant Membership ───────────────────────────────────────
+
+model TenantMembership {
+  id       String     @id @default(uuid()) @db.Uuid
+  userId   String     @map("user_id") @db.Uuid
+  tenantId String     @map("tenant_id") @db.Uuid
+  role     UserRole   @default(SOC_ANALYST_L1)
+  status   UserStatus @default(active)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, tenantId])
+  @@index([tenantId])
+  @@index([userId])
+  @@map("tenant_memberships")
+}
+
+// ─── User Preferences ────────────────────────────────────────
+
+model UserPreference {
+  id                 String  @id @default(uuid()) @db.Uuid
+  userId             String  @unique @map("user_id") @db.Uuid
+  theme              String  @default("system") @db.VarChar(20)
+  language           String  @default("en") @db.VarChar(10)
+  notificationsEmail Boolean @default(true) @map("notifications_email")
+  notificationsInApp Boolean @default(true) @map("notifications_in_app")
+
+  // Notification category preferences
+  notifyCriticalAlerts  Boolean @default(true)  @map("notify_critical_alerts")
+  notifyHighAlerts      Boolean @default(true)  @map("notify_high_alerts")
+  notifyCaseAssignments Boolean @default(true)  @map("notify_case_assignments")
+  notifyIncidentUpdates Boolean @default(true)  @map("notify_incident_updates")
+  notifyComplianceAlerts Boolean @default(true) @map("notify_compliance_alerts")
+  notifyCaseUpdates      Boolean @default(true)  @map("notify_case_updates")
+  notifyCaseComments     Boolean @default(true)  @map("notify_case_comments")
+  notifyCaseActivity     Boolean @default(true)  @map("notify_case_activity")
+  notifyUserManagement   Boolean @default(true)  @map("notify_user_management")
+
+  // Data retention preferences (days as string, e.g. '30', '90', '365', 'unlimited')
+  retentionAlerts    String @default("90")  @map("retention_alerts") @db.VarChar(20)
+  retentionLogs      String @default("90")  @map("retention_logs") @db.VarChar(20)
+  retentionIncidents String @default("365") @map("retention_incidents") @db.VarChar(20)
+  retentionAuditLogs String @default("365") @map("retention_audit_logs") @db.VarChar(20)
+  dashboardDensity   DashboardDensity @default(comfortable) @map("dashboard_density")
+  collapsedDashboardPanels DashboardPanelKey[] @default([]) @map("collapsed_dashboard_panels")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_preferences")
+}
+
+model UserSession {
+  id          String                @id @default(uuid()) @db.Uuid
+  familyId    String                @unique @map("family_id") @db.Uuid
+  userId      String                @map("user_id") @db.Uuid
+  tenantId    String                @map("tenant_id") @db.Uuid
+  status      UserSessionStatus     @default(active)
+  osFamily    UserSessionOsFamily   @default(unknown) @map("os_family")
+  clientType  UserSessionClientType @default(unknown) @map("client_type")
+  ipAddress   String?               @map("ip_address") @db.VarChar(64)
+  userAgent   String?               @map("user_agent") @db.VarChar(1024)
+  currentAccessJti String?          @map("current_access_jti") @db.VarChar(64)
+  currentAccessExpiresAt DateTime?  @map("current_access_expires_at")
+  lastSeenAt  DateTime              @map("last_seen_at")
+  lastLoginAt DateTime              @map("last_login_at")
+  revokedAt   DateTime?             @map("revoked_at")
+  revokedByUserId String?           @map("revoked_by_user_id") @db.Uuid
+  revokeReason    String?           @map("revoke_reason") @db.VarChar(100)
+  createdAt   DateTime              @default(now()) @map("created_at")
+  updatedAt   DateTime              @updatedAt @map("updated_at")
+
+  family RefreshTokenFamily @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  user   User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, status])
+  @@index([userId, status])
+  @@index([lastSeenAt])
+  @@map("user_sessions")
+}
+
+model RefreshTokenFamily {
+  id                String                   @id @db.Uuid
+  userId            String                   @map("user_id") @db.Uuid
+  tenantId          String                   @map("tenant_id") @db.Uuid
+  currentGeneration Int                      @default(0) @map("current_generation")
+  status            RefreshTokenFamilyStatus @default(active)
+  revokedAt         DateTime?                @map("revoked_at")
+  revokedReason     String?                  @map("revoked_reason") @db.VarChar(100)
+  expiresAt         DateTime                 @map("expires_at")
+  createdAt         DateTime                 @default(now()) @map("created_at")
+  updatedAt         DateTime                 @updatedAt @map("updated_at")
+
+  tenant    Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user      User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  rotations RefreshTokenRotation[]
+  session   UserSession?
+
+  @@index([tenantId, status])
+  @@index([userId, status])
+  @@map("refresh_token_families")
+}
+
+model RefreshTokenRotation {
+  id               String                     @id @default(uuid()) @db.Uuid
+  familyId         String                     @map("family_id") @db.Uuid
+  generation       Int
+  jtiHash          String                     @unique @map("jti_hash") @db.VarChar(64)
+  parentRotationId String?                    @map("parent_rotation_id") @db.Uuid
+  status           RefreshTokenRotationStatus @default(active)
+  issuedAt         DateTime                   @default(now()) @map("issued_at")
+  usedAt           DateTime?                  @map("used_at")
+  replacedAt       DateTime?                  @map("replaced_at")
+  replayedAt       DateTime?                  @map("replayed_at")
+  expiresAt        DateTime                   @map("expires_at")
+
+  family          RefreshTokenFamily    @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  parentRotation  RefreshTokenRotation? @relation("RefreshTokenRotationChain", fields: [parentRotationId], references: [id], onDelete: SetNull)
+  childRotations  RefreshTokenRotation[] @relation("RefreshTokenRotationChain")
+
+  @@unique([familyId, generation])
+  @@index([familyId, status])
+  @@map("refresh_token_rotations")
+}
+
+// ─── Connector Configurations ────────────────────────────────
+
+model ConnectorConfig {
+  id              String        @id @default(uuid()) @db.Uuid
+  tenantId        String        @map("tenant_id") @db.Uuid
+  type            ConnectorType
+  name            String        @db.VarChar(255)
+  enabled         Boolean       @default(false)
+  authType        AuthType      @default(basic) @map("auth_type")
+  encryptedConfig String        @map("encrypted_config") @db.Text
+  lastTestAt      DateTime?     @map("last_test_at")
+  lastTestOk      Boolean?      @map("last_test_ok")
+  lastError       String?       @map("last_error") @db.Text
+  lastSyncAt      DateTime?     @map("last_sync_at")
+  syncEnabled     Boolean       @default(true) @map("sync_enabled")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, type])
+  @@index([tenantId])
+  @@map("connector_configs")
+}
+
+// ─── Alerts ──────────────────────────────────────────────────
+
+model Alert {
+  id              String        @id @default(uuid()) @db.Uuid
+  tenantId        String        @map("tenant_id") @db.Uuid
+  externalId      String?       @map("external_id") @db.VarChar(500)
+  title           String        @db.VarChar(1000)
+  description     String?       @db.Text
+  severity        AlertSeverity @default(medium)
+  status          AlertStatus   @default(new_alert)
+  source          String        @db.VarChar(50)
+  ruleName        String?       @map("rule_name") @db.VarChar(500)
+  ruleId          String?       @map("rule_id") @db.VarChar(100)
+  agentName       String?       @map("agent_name") @db.VarChar(255)
+  sourceIp        String?       @map("source_ip") @db.VarChar(45)
+  destinationIp   String?       @map("destination_ip") @db.VarChar(45)
+  mitreTactics    String[]      @default([]) @map("mitre_tactics")
+  mitreTechniques String[]      @default([]) @map("mitre_techniques")
+  rawEvent        Json?         @map("raw_event")
+  acknowledgedBy  String?       @map("acknowledged_by") @db.VarChar(320)
+  acknowledgedAt  DateTime?     @map("acknowledged_at")
+  resolution      String?       @db.Text
+  closedAt        DateTime?     @map("closed_at")
+  closedBy        String?       @map("closed_by") @db.VarChar(320)
+  timestamp       DateTime      @default(now())
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  aiSummary              String?   @map("ai_summary") @db.Text
+  aiConfidence           Float?    @map("ai_confidence")
+  aiSeveritySuggestion   String?   @map("ai_severity_suggestion") @db.VarChar(20)
+  aiEscalationSuggestion String?   @map("ai_escalation_suggestion") @db.Text
+  aiLastRunAt            DateTime? @map("ai_last_run_at")
+  aiLastExecutionId      String?   @map("ai_last_execution_id") @db.Uuid
+  aiStatus               String?   @map("ai_status") @db.VarChar(30)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, externalId])
+  @@index([tenantId])
+  @@index([tenantId, severity])
+  @@index([tenantId, status])
+  @@index([tenantId, timestamp])
+  @@index([tenantId, source])
+  @@map("alerts")
+}
+
+// ─── Case Cycles ────────────────────────────────────────────
+
+model CaseCycle {
+  id          String          @id @default(uuid()) @db.Uuid
+  tenantId    String          @map("tenant_id") @db.Uuid
+  name        String          @db.VarChar(255)
+  description String?         @db.Text
+  status      CaseCycleStatus @default(active)
+  startDate   DateTime        @map("start_date")
+  endDate     DateTime?       @map("end_date")
+  createdBy   String          @map("created_by") @db.VarChar(320)
+  closedBy    String?         @map("closed_by") @db.VarChar(320)
+  closedAt    DateTime?       @map("closed_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  cases  Case[]
+
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@map("case_cycles")
+}
+
+// ─── Cases ───────────────────────────────────────────────────
+
+model Case {
+  id           String       @id @default(uuid()) @db.Uuid
+  tenantId     String       @map("tenant_id") @db.Uuid
+  caseNumber   String       @unique @map("case_number") @db.VarChar(20)
+  title        String       @db.VarChar(500)
+  description  String?      @db.Text
+  severity     CaseSeverity @default(medium)
+  status       CaseStatus   @default(open)
+  ownerUserId  String?      @map("owner_user_id") @db.Uuid
+  createdBy    String?      @map("created_by") @db.VarChar(320)
+  linkedAlerts String[]     @default([]) @map("linked_alerts")
+  cycleId      String?      @map("cycle_id") @db.Uuid
+  closedAt     DateTime?    @map("closed_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  tenant   Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  cycle    CaseCycle?     @relation(fields: [cycleId], references: [id], onDelete: SetNull)
+  notes     CaseNote[]
+  comments  CaseComment[]
+  timeline  CaseTimeline[]
+  tasks     CaseTask[]
+  artifacts CaseArtifact[]
+
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@index([cycleId])
+  @@map("cases")
+}
+
+model CaseNote {
+  id     String @id @default(uuid()) @db.Uuid
+  caseId String @map("case_id") @db.Uuid
+  author String @db.VarChar(320)
+  body   String @db.Text
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  case Case @relation(fields: [caseId], references: [id], onDelete: Cascade)
+
+  @@index([caseId])
+  @@map("case_notes")
+}
+
+model CaseComment {
+  id        String  @id @default(uuid()) @db.Uuid
+  caseId    String  @map("case_id") @db.Uuid
+  authorId  String  @map("author_id") @db.Uuid
+  body      String  @db.Text
+  isEdited  Boolean @default(false) @map("is_edited")
+  isDeleted Boolean @default(false) @map("is_deleted")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  case     Case                 @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  mentions CaseCommentMention[]
+
+  @@index([caseId, createdAt])
+  @@index([authorId])
+  @@map("case_comments")
+}
+
+model CaseCommentMention {
+  id        String @id @default(uuid()) @db.Uuid
+  commentId String @map("comment_id") @db.Uuid
+  userId    String @map("user_id") @db.Uuid
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  comment CaseComment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+
+  @@unique([commentId, userId])
+  @@index([commentId])
+  @@index([userId])
+  @@map("case_comment_mentions")
+}
+
+model CaseTimeline {
+  id          String @id @default(uuid()) @db.Uuid
+  caseId      String @map("case_id") @db.Uuid
+  type        String @db.VarChar(50)
+  actor       String @db.VarChar(320)
+  description String @db.Text
+
+  timestamp DateTime @default(now())
+
+  case Case @relation(fields: [caseId], references: [id], onDelete: Cascade)
+
+  @@index([caseId])
+  @@index([caseId, timestamp])
+  @@map("case_timeline")
+}
+
+model CaseTask {
+  id          String @id @default(uuid()) @db.Uuid
+  caseId      String @map("case_id") @db.Uuid
+  title       String @db.VarChar(500)
+  status      String @default("pending") @db.VarChar(20)
+  assignee    String? @db.VarChar(320)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  case Case @relation(fields: [caseId], references: [id], onDelete: Cascade)
+
+  @@index([caseId])
+  @@map("case_tasks")
+}
+
+model CaseArtifact {
+  id     String @id @default(uuid()) @db.Uuid
+  caseId String @map("case_id") @db.Uuid
+  type   String @db.VarChar(20)
+  value  String @db.VarChar(2048)
+  source String @default("manual") @db.VarChar(100)
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  case Case @relation(fields: [caseId], references: [id], onDelete: Cascade)
+
+  @@index([caseId])
+  @@map("case_artifacts")
+}
+
+// ─── Threat Intel ────────────────────────────────────────────
+
+model IntelIOC {
+  id        String   @id @default(uuid()) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  iocValue  String   @map("ioc_value") @db.VarChar(1000)
+  iocType   String   @map("ioc_type") @db.VarChar(50)
+  source    String   @db.VarChar(100)
+  severity  String   @db.VarChar(20)
+  hitCount  Int      @default(0) @map("hit_count")
+  firstSeen DateTime @default(now()) @map("first_seen")
+  lastSeen  DateTime @default(now()) @map("last_seen")
+  tags      String[] @default([])
+  active    Boolean  @default(true)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, iocValue, iocType])
+  @@index([tenantId])
+  @@index([tenantId, iocType])
+  @@map("intel_iocs")
+}
+
+model IntelMispEvent {
+  id             String   @id @default(uuid()) @db.Uuid
+  tenantId       String   @map("tenant_id") @db.Uuid
+  mispEventId    String   @map("misp_event_id") @db.VarChar(100)
+  organization   String   @db.VarChar(255)
+  threatLevel    String   @map("threat_level") @db.VarChar(20)
+  info           String   @db.Text
+  date           DateTime
+  tags           Json     @default("[]")
+  attributeCount Int      @default(0) @map("attribute_count")
+  published      Boolean  @default(false)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, mispEventId])
+  @@index([tenantId])
+  @@map("intel_misp_events")
+}
+
+// ─── Threat Hunting ──────────────────────────────────────────
+
+model HuntSession {
+  id          String            @id @default(uuid()) @db.Uuid
+  tenantId    String            @map("tenant_id") @db.Uuid
+  query       String            @db.Text
+  status      HuntSessionStatus @default(running)
+  startedAt   DateTime          @default(now()) @map("started_at")
+  completedAt DateTime?         @map("completed_at")
+  startedBy   String            @map("started_by") @db.VarChar(320)
+  eventsFound Int               @default(0) @map("events_found")
+  reasoning   String[]          @default([])
+  uniqueIps       Int               @default(0) @map("unique_ips")
+  threatScore     Int               @default(0) @map("threat_score")
+  mitreTactics    String[]          @default([]) @map("mitre_tactics")
+  mitreTechniques String[]          @default([]) @map("mitre_techniques")
+  aiAnalysis      String?           @map("ai_analysis") @db.Text
+  sourceType      String            @default("wazuh") @map("source_type") @db.VarChar(50)
+  timeRange       String            @default("24h") @map("time_range") @db.VarChar(10)
+  executedQuery   Json?             @map("executed_query")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  events HuntEvent[]
+
+  @@index([tenantId])
+  @@index([tenantId, startedAt])
+  @@map("hunt_sessions")
+}
+
+model HuntEvent {
+  id            String   @id @default(uuid()) @db.Uuid
+  huntSessionId String   @map("hunt_session_id") @db.Uuid
+  timestamp     DateTime @default(now())
+  severity      String   @db.VarChar(20)
+  eventId       String   @map("event_id") @db.VarChar(255)
+  sourceIp      String?  @map("source_ip") @db.VarChar(45)
+  user          String?  @db.VarChar(320)
+  description   String   @db.Text
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  huntSession HuntSession @relation(fields: [huntSessionId], references: [id], onDelete: Cascade)
+
+  @@index([huntSessionId])
+  @@index([eventId])
+  @@map("hunt_events")
+}
+
+// ─── Audit Logs ──────────────────────────────────────────────
+
+model AuditLog {
+  id         String   @id @default(uuid()) @db.Uuid
+  tenantId   String   @map("tenant_id") @db.Uuid
+  actor      String   @db.VarChar(320)
+  role       UserRole
+  action     String   @db.VarChar(100)
+  resource   String   @db.VarChar(255)
+  resourceId String?  @map("resource_id") @db.VarChar(255)
+  details    String?  @db.Text
+  ipAddress  String?  @map("ip_address") @db.VarChar(45)
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([tenantId, createdAt])
+  @@map("audit_logs")
+}
+
+// ─── AI Audit Logs ───────────────────────────────────────────
+
+model AiAuditLog {
+  id           String  @id @default(uuid()) @db.Uuid
+  tenantId     String  @map("tenant_id") @db.Uuid
+  actor        String  @db.VarChar(320)
+  action       String  @db.VarChar(100)
+  model        String  @db.VarChar(100)
+  inputTokens  Int     @default(0) @map("input_tokens")
+  outputTokens Int     @default(0) @map("output_tokens")
+  prompt       String? @db.Text
+  response     String? @db.Text
+  durationMs   Int?    @map("duration_ms")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([tenantId, createdAt])
+  @@map("ai_audit_logs")
+}
+
+// ─── Saved Queries (Threat Hunting) ──────────────────────────
+
+model SavedQuery {
+  id          String  @id @default(uuid()) @db.Uuid
+  tenantId    String  @map("tenant_id") @db.Uuid
+  name        String  @db.VarChar(255)
+  query       String  @db.Text
+  description String? @db.Text
+  createdBy   String  @map("created_by") @db.VarChar(320)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@map("saved_queries")
+}
+
+// ─── Application Logs ───────────────────────────────────────
+
+model ApplicationLog {
+  id               String   @id @default(uuid()) @db.Uuid
+  level            String   @db.VarChar(10)
+  message          String   @db.VarChar(2000)
+  feature          String   @db.VarChar(100)
+  action           String   @db.VarChar(100)
+  functionName     String?  @map("function_name") @db.VarChar(255)
+  className        String?  @map("class_name") @db.VarChar(255)
+  tenantId         String?  @map("tenant_id") @db.Uuid
+  actorUserId      String?  @map("actor_user_id") @db.Uuid
+  actorEmail       String?  @map("actor_email") @db.VarChar(320)
+  requestId        String?  @map("request_id") @db.VarChar(100)
+  targetResource   String?  @map("target_resource") @db.VarChar(100)
+  targetResourceId String?  @map("target_resource_id") @db.VarChar(255)
+  outcome          String?  @db.VarChar(50)
+  metadata         Json?
+  stackTrace       String?  @map("stack_trace") @db.Text
+  httpMethod       String?  @map("http_method") @db.VarChar(10)
+  httpRoute        String?  @map("http_route") @db.VarChar(500)
+  httpStatusCode   Int?     @map("http_status_code")
+  sourceType       String?  @map("source_type") @db.VarChar(50)
+  ipAddress        String?  @map("ip_address") @db.VarChar(45)
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([createdAt])
+  @@index([level])
+  @@index([tenantId])
+  @@index([tenantId, createdAt])
+  @@index([actorUserId])
+  @@index([actorEmail])
+  @@index([feature])
+  @@index([functionName])
+  @@map("application_logs")
+}
+
+// ─── Data Explorer — Sync Jobs ──────────────────────────────
+
+enum SyncJobStatus {
+  running
+  completed
+  failed
+}
+
+/// Tracks each sync run for a connector, providing history, audit, and retry capability.
+/// Source-of-truth for sync operations. Retention: 90 days (cron cleanup).
+model ConnectorSyncJob {
+  id              String        @id @default(uuid()) @db.Uuid
+  tenantId        String        @map("tenant_id") @db.Uuid
+  connectorType   ConnectorType @map("connector_type")
+  status          SyncJobStatus @default(running)
+  recordsSynced   Int           @default(0) @map("records_synced")
+  recordsFailed   Int           @default(0) @map("records_failed")
+  errorMessage    String?       @map("error_message") @db.Text
+  errorCode       String?       @map("error_code") @db.VarChar(100)
+  durationMs      Int?          @map("duration_ms")
+  initiatedBy     String        @default("system") @map("initiated_by") @db.VarChar(320)
+  cursor          String?       @db.VarChar(1000)
+  startedAt       DateTime      @default(now()) @map("started_at")
+  completedAt     DateTime?     @map("completed_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([tenantId])
+  @@index([tenantId, connectorType])
+  @@index([tenantId, startedAt])
+  @@index([status])
+  @@map("connector_sync_jobs")
+}
+
+// ─── Data Explorer — Grafana Dashboards ─────────────────────
+
+/// Synced Grafana dashboard metadata. Fetch detail live.
+/// Indexed for search and browse. Retention: synced on demand, replaced on re-sync.
+model GrafanaDashboard {
+  id          String   @id @default(uuid()) @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  uid         String   @db.VarChar(255)
+  title       String   @db.VarChar(500)
+  folderTitle String?  @map("folder_title") @db.VarChar(500)
+  url         String   @db.VarChar(1000)
+  tags        String[] @default([])
+  type        String   @default("dash-db") @db.VarChar(50)
+  isStarred   Boolean  @default(false) @map("is_starred")
+
+  syncedAt  DateTime @default(now()) @map("synced_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([tenantId, uid])
+  @@index([tenantId])
+  @@map("grafana_dashboards")
+}
+
+// ─── Data Explorer — Velociraptor ───────────────────────────
+
+/// Synced Velociraptor endpoint metadata. Heavy details fetched live.
+/// Retention: re-synced periodically, stale entries auto-removed after 7 days.
+model VelociraptorEndpoint {
+  id         String    @id @default(uuid()) @db.Uuid
+  tenantId   String    @map("tenant_id") @db.Uuid
+  clientId   String    @map("client_id") @db.VarChar(255)
+  hostname   String    @db.VarChar(500)
+  os         String?   @db.VarChar(100)
+  osVersion  String?   @map("os_version") @db.VarChar(255)
+  lastSeenAt DateTime? @map("last_seen_at")
+  labels     String[]  @default([])
+  ipAddress  String?   @map("ip_address") @db.VarChar(45)
+
+  syncedAt  DateTime @default(now()) @map("synced_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([tenantId, clientId])
+  @@index([tenantId])
+  @@index([tenantId, hostname])
+  @@index([clientId])
+  @@map("velociraptor_endpoints")
+}
+
+/// Synced Velociraptor hunt metadata.
+model VelociraptorHunt {
+  id          String   @id @default(uuid()) @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  huntId      String   @map("hunt_id") @db.VarChar(255)
+  description String?  @db.Text
+  creator     String?  @db.VarChar(255)
+  state       String?  @db.VarChar(50)
+  artifacts   String[] @default([])
+  totalClients    Int  @default(0) @map("total_clients")
+  finishedClients Int  @default(0) @map("finished_clients")
+  startedAt   DateTime? @map("started_at")
+
+  syncedAt  DateTime @default(now()) @map("synced_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([tenantId, huntId])
+  @@index([tenantId])
+  @@index([huntId])
+  @@map("velociraptor_hunts")
+}
+
+/// Synced Velociraptor notebook metadata.
+model VelociraptorNotebook {
+  id          String    @id @default(uuid()) @db.Uuid
+  tenantId    String    @map("tenant_id") @db.Uuid
+  notebookId  String    @map("notebook_id") @db.VarChar(255)
+  name        String    @db.VarChar(500)
+  description String?   @db.Text
+  creator     String?   @db.VarChar(255)
+  modifiedAt  DateTime? @map("modified_at")
+
+  syncedAt  DateTime @default(now()) @map("synced_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([tenantId, notebookId])
+  @@index([tenantId])
+  @@index([notebookId])
+  @@map("velociraptor_notebooks")
+}
+
+// ─── Data Explorer — Logstash Pipeline Logs ─────────────────
+
+/// Synced Logstash pipeline log entries. Seeded or synced from Logstash stats.
+/// Indexed for search and browse. Retention: synced on demand, replaced on re-sync.
+model LogstashPipelineLog {
+  id             String   @id @default(uuid()) @db.Uuid
+  tenantId       String   @map("tenant_id") @db.Uuid
+  pipelineId     String   @map("pipeline_id") @db.VarChar(255)
+  timestamp      DateTime @default(now())
+  level          String   @db.VarChar(20)
+  message        String   @db.Text
+  source         String   @db.VarChar(255)
+  eventsIn       Int      @default(0) @map("events_in")
+  eventsOut      Int      @default(0) @map("events_out")
+  eventsFiltered Int      @default(0) @map("events_filtered")
+  durationMs     Float    @default(0) @map("duration_ms")
+  metadata       Json?
+
+  syncedAt  DateTime @default(now()) @map("synced_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([tenantId, timestamp])
+  @@index([tenantId, pipelineId])
+  @@index([tenantId, level])
+  @@index([pipelineId])
+  @@map("logstash_pipeline_logs")
+}
+
+// ─── Data Explorer — Shuffle Workflows ──────────────────────
+
+/// Synced Shuffle workflow metadata. Execution details fetched live.
+model ShuffleWorkflow {
+  id           String   @id @default(uuid()) @db.Uuid
+  tenantId     String   @map("tenant_id") @db.Uuid
+  workflowId   String   @map("workflow_id") @db.VarChar(255)
+  name         String   @db.VarChar(500)
+  description  String?  @db.Text
+  isValid      Boolean  @default(false) @map("is_valid")
+  triggerCount Int      @default(0) @map("trigger_count")
+  tags         String[] @default([])
+
+  syncedAt  DateTime @default(now()) @map("synced_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([tenantId, workflowId])
+  @@index([tenantId])
+  @@index([workflowId])
+  @@map("shuffle_workflows")
+}
+
+// ─── Incidents ──────────────────────────────────────────────
+
+model Incident {
+  id               String            @id @default(uuid()) @db.Uuid
+  tenantId         String            @map("tenant_id") @db.Uuid
+  incidentNumber   String            @unique @map("incident_number") @db.VarChar(20)
+  title            String            @db.VarChar(500)
+  description      String?           @db.Text
+  severity         IncidentSeverity  @default(medium)
+  status           IncidentStatus    @default(open)
+  category         IncidentCategory  @default(other)
+  assigneeId       String?           @map("assignee_id") @db.Uuid
+  linkedAlertIds   String[]          @default([]) @map("linked_alert_ids")
+  linkedCaseId     String?           @map("linked_case_id") @db.Uuid
+  mitreTactics     String[]          @default([]) @map("mitre_tactics")
+  mitreTechniques  String[]          @default([]) @map("mitre_techniques")
+  createdBy        String            @map("created_by") @db.VarChar(320)
+  resolvedAt       DateTime?         @map("resolved_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  tenant   Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  timeline IncidentTimeline[]
+
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@index([tenantId, severity])
+  @@index([tenantId, category])
+  @@index([tenantId, createdAt])
+  @@map("incidents")
+}
+
+model IncidentTimeline {
+  id          String            @id @default(uuid()) @db.Uuid
+  incidentId  String            @map("incident_id") @db.Uuid
+  event       String            @db.Text
+  actorType   IncidentActorType @default(system) @map("actor_type")
+  actorName   String            @map("actor_name") @db.VarChar(320)
+
+  timestamp DateTime @default(now())
+
+  incident Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+
+  @@index([incidentId])
+  @@index([incidentId, timestamp])
+  @@map("incident_timeline")
+}
+
+// ─── Correlation Rules & Sigma ──────────────────────────────
+
+model CorrelationRule {
+  id              String       @id @default(uuid()) @db.Uuid
+  tenantId        String       @map("tenant_id") @db.Uuid
+  ruleNumber      String       @unique @map("rule_number") @db.VarChar(20)
+  title           String       @db.VarChar(500)
+  description     String?      @db.Text
+  source          RuleSource   @default(custom)
+  severity        RuleSeverity @default(medium)
+  status          RuleStatus   @default(active)
+  yamlContent     String?      @map("yaml_content") @db.Text
+  conditions      Json?
+  mitreTactics    String[]     @default([]) @map("mitre_tactics")
+  mitreTechniques String[]     @default([]) @map("mitre_techniques")
+  hitCount        Int          @default(0) @map("hit_count")
+  linkedIncidents Int          @default(0) @map("linked_incidents")
+  createdBy       String       @map("created_by") @db.VarChar(320)
+  lastFiredAt     DateTime?    @map("last_fired_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([tenantId, source])
+  @@index([tenantId, severity])
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+  @@map("correlation_rules")
+}
+
+// ─── Vulnerabilities ────────────────────────────────────────
+
+model Vulnerability {
+  id                String                @id @default(uuid()) @db.Uuid
+  tenantId          String                @map("tenant_id") @db.Uuid
+  cveId             String                @map("cve_id") @db.VarChar(20)
+  cvssScore         Float                 @map("cvss_score")
+  severity          VulnerabilitySeverity @default(medium)
+  description       String                @db.Text
+  affectedHosts     Int                   @default(0) @map("affected_hosts")
+  exploitAvailable  Boolean               @default(false) @map("exploit_available")
+  patchStatus       PatchStatus           @default(patch_pending) @map("patch_status")
+  affectedSoftware  String?               @map("affected_software") @db.VarChar(500)
+  remediation       String?               @db.Text
+  discoveredAt      DateTime              @default(now()) @map("discovered_at")
+  patchedAt         DateTime?             @map("patched_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, cveId])
+  @@index([tenantId])
+  @@index([tenantId, severity])
+  @@index([tenantId, patchStatus])
+  @@index([tenantId, exploitAvailable])
+  @@index([tenantId, createdAt])
+  @@map("vulnerabilities")
+}
+
+// ─── AI Agents ──────────────────────────────────────────────
+
+model AiAgent {
+  id          String        @id @default(uuid()) @db.Uuid
+  tenantId    String        @map("tenant_id") @db.Uuid
+  name        String        @db.VarChar(255)
+  description String?       @db.Text
+  model       String        @db.VarChar(100)
+  tier        AiAgentTier   @default(L1)
+  status      AiAgentStatus @default(offline)
+  soulMd      String?       @map("soul_md") @db.Text
+  totalTasks  Int           @default(0) @map("total_tasks")
+  totalTokens BigInt        @default(0) @map("total_tokens")
+  totalCost   Float         @default(0) @map("total_cost")
+  avgTimeMs   Int           @default(0) @map("avg_time_ms")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  tenant   Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  sessions AiAgentSession[]
+  tools    AiAgentTool[]
+
+  @@unique([tenantId, name])
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@map("ai_agents")
+}
+
+model AiAgentSession {
+  id          String               @id @default(uuid()) @db.Uuid
+  agentId     String               @map("agent_id") @db.Uuid
+  status      AiAgentSessionStatus @default(running)
+  input       String               @db.Text
+  output      String?              @db.Text
+  model       String?              @db.VarChar(255)
+  provider    String?              @db.VarChar(50)
+  tokensUsed  Int                  @default(0) @map("tokens_used")
+  cost        Float                @default(0)
+  durationMs  Int                  @default(0) @map("duration_ms")
+  errorMessage String?             @map("error_message") @db.Text
+
+  startedAt   DateTime  @default(now()) @map("started_at")
+  completedAt DateTime? @map("completed_at")
+
+  tenantId        String?   @map("tenant_id") @db.Uuid
+  triggerType     String    @default("user") @map("trigger_type") @db.VarChar(30)
+  sourceModule    String?   @map("source_module") @db.VarChar(50)
+  sourceEntityId  String?   @map("source_entity_id") @db.VarChar(255)
+  jobId           String?   @map("job_id") @db.Uuid
+  confidenceScore Float?    @map("confidence_score")
+  findingsCount   Int       @default(0) @map("findings_count")
+  writebacksCount Int       @default(0) @map("writebacks_count")
+
+  agent AiAgent @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  @@index([agentId])
+  @@index([agentId, startedAt])
+  @@index([tenantId])
+  @@index([tenantId, triggerType])
+  @@index([sourceModule, sourceEntityId])
+  @@map("ai_agent_sessions")
+}
+
+model AiAgentTool {
+  id          String @id @default(uuid()) @db.Uuid
+  agentId     String @map("agent_id") @db.Uuid
+  name        String @db.VarChar(255)
+  description String @db.Text
+  schema      Json?
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  agent AiAgent @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  @@unique([agentId, name])
+  @@index([agentId])
+  @@map("ai_agent_tools")
+}
+
+// ─── UEBA ───────────────────────────────────────────────────
+
+model UebaEntity {
+  id           String         @id @default(uuid()) @db.Uuid
+  tenantId     String         @map("tenant_id") @db.Uuid
+  entityName   String         @map("entity_name") @db.VarChar(320)
+  entityType   UebaEntityType @map("entity_type")
+  riskScore    Float          @default(0) @map("risk_score")
+  riskLevel    UebaRiskLevel  @default(normal) @map("risk_level")
+  topAnomaly   String?        @map("top_anomaly") @db.VarChar(500)
+  trendData    Json?          @map("trend_data")
+  lastSeenAt   DateTime?      @map("last_seen_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  tenant    Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  anomalies UebaAnomaly[]
+
+  @@unique([tenantId, entityName, entityType])
+  @@index([tenantId])
+  @@index([tenantId, riskLevel])
+  @@index([tenantId, riskScore])
+  @@map("ueba_entities")
+}
+
+model UebaAnomaly {
+  id          String        @id @default(uuid()) @db.Uuid
+  tenantId    String        @map("tenant_id") @db.Uuid
+  entityId    String        @map("entity_id") @db.Uuid
+  anomalyType String        @map("anomaly_type") @db.VarChar(255)
+  description String        @db.Text
+  severity    UebaRiskLevel @default(medium)
+  score       Float         @default(0)
+  detectedAt  DateTime      @default(now()) @map("detected_at")
+  resolved    Boolean       @default(false)
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  tenant Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  entity UebaEntity @relation(fields: [entityId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([tenantId, severity])
+  @@index([entityId])
+  @@index([tenantId, detectedAt])
+  @@map("ueba_anomalies")
+}
+
+model MlModel {
+  id           String        @id @default(uuid()) @db.Uuid
+  tenantId     String        @map("tenant_id") @db.Uuid
+  name         String        @db.VarChar(255)
+  modelType    MlModelType   @map("model_type")
+  accuracy     Float         @default(0)
+  status       MlModelStatus @default(inactive)
+  lastTrained  DateTime?     @map("last_trained")
+  dataPoints   Int           @default(0) @map("data_points")
+  description  String?       @db.Text
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, name])
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@map("ml_models")
+}
+
+// ─── Attack Paths ───────────────────────────────────────────
+
+model AttackPath {
+  id                String             @id @default(uuid()) @db.Uuid
+  tenantId          String             @map("tenant_id") @db.Uuid
+  pathNumber        String             @unique @map("path_number") @db.VarChar(20)
+  title             String             @db.VarChar(500)
+  description       String?            @db.Text
+  severity          AttackPathSeverity @default(medium)
+  status            AttackPathStatus   @default(active)
+  stages            Json
+  affectedAssets    Int                @default(0) @map("affected_assets")
+  killChainCoverage Float              @default(0) @map("kill_chain_coverage")
+  linkedIncidentIds String[]           @default([]) @map("linked_incident_ids")
+  mitreTactics      String[]           @default([]) @map("mitre_tactics")
+  mitreTechniques   String[]           @default([]) @map("mitre_techniques")
+  detectedAt        DateTime           @default(now()) @map("detected_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([tenantId, severity])
+  @@index([tenantId, status])
+  @@index([tenantId, detectedAt])
+  @@map("attack_paths")
+}
+
+// ─── Notifications ──────────────────────────────────────────
+
+model Notification {
+  id               String    @id @default(uuid()) @db.Uuid
+  tenantId         String    @map("tenant_id") @db.Uuid
+  type             String    @db.VarChar(50)
+  actorUserId      String?   @map("actor_user_id") @db.Uuid
+  recipientUserId  String    @map("recipient_user_id") @db.Uuid
+  title            String    @db.VarChar(500)
+  message          String    @db.Text
+  entityType       String    @map("entity_type") @db.VarChar(50)
+  entityId         String    @map("entity_id") @db.Uuid
+  caseId           String?   @map("case_id") @db.Uuid
+  caseCommentId    String?   @map("case_comment_id") @db.Uuid
+  readAt           DateTime? @map("read_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([recipientUserId, caseCommentId])
+  @@index([tenantId])
+  @@index([tenantId, recipientUserId, readAt, createdAt])
+  @@index([tenantId, recipientUserId, createdAt])
+  @@index([caseCommentId])
+  @@index([actorUserId])
+  @@index([recipientUserId])
+  @@index([entityId])
+  @@map("notifications")
+}
+
+// ─── SOAR Playbooks ─────────────────────────────────────────
+
+model SoarPlaybook {
+  id                String             @id @default(uuid()) @db.Uuid
+  tenantId          String             @map("tenant_id") @db.Uuid
+  name              String             @db.VarChar(255)
+  description       String?            @db.Text
+  status            SoarPlaybookStatus @default(draft)
+  triggerType       SoarTriggerType    @default(manual) @map("trigger_type")
+  triggerConditions Json?              @map("trigger_conditions")
+  steps             Json               @default("[]")
+  executionCount    Int                @default(0) @map("execution_count")
+  lastExecutedAt    DateTime?          @map("last_executed_at")
+  createdBy         String             @map("created_by") @db.VarChar(320)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  tenant     Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  executions SoarExecution[]
+
+  @@unique([tenantId, name])
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@index([tenantId, triggerType])
+  @@map("soar_playbooks")
+}
+
+// ─── SOAR Executions ────────────────────────────────────────
+
+model SoarExecution {
+  id             String              @id @default(uuid()) @db.Uuid
+  tenantId       String              @map("tenant_id") @db.Uuid
+  playbookId     String              @map("playbook_id") @db.Uuid
+  status         SoarExecutionStatus @default(running)
+  triggerSource  String?             @map("trigger_source") @db.VarChar(255)
+  triggeredBy    String              @map("triggered_by") @db.VarChar(320)
+  startedAt      DateTime            @default(now()) @map("started_at")
+  completedAt    DateTime?           @map("completed_at")
+  stepsCompleted Int                 @default(0) @map("steps_completed")
+  totalSteps     Int                 @default(0) @map("total_steps")
+  output         Json?
+  error          String?             @db.Text
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  tenant   Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  playbook SoarPlaybook @relation(fields: [playbookId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@index([playbookId])
+  @@index([tenantId, startedAt])
+  @@map("soar_executions")
+}
+
+// ─── Compliance Frameworks ──────────────────────────────────
+
+model ComplianceFramework {
+  id             String             @id @default(uuid()) @db.Uuid
+  tenantId       String             @map("tenant_id") @db.Uuid
+  name           String             @db.VarChar(255)
+  description    String?            @db.Text
+  standard       ComplianceStandard
+  version        String             @db.VarChar(50)
+  totalControls  Int                @default(0) @map("total_controls")
+  passedControls Int                @default(0) @map("passed_controls")
+  failedControls Int                @default(0) @map("failed_controls")
+  overallScore   Float              @default(0) @map("overall_score")
+  lastAssessedAt DateTime?          @map("last_assessed_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  tenant   Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  controls ComplianceControl[]
+
+  @@unique([tenantId, standard, version])
+  @@index([tenantId])
+  @@index([tenantId, standard])
+  @@map("compliance_frameworks")
+}
+
+// ─── Compliance Controls ────────────────────────────────────
+
+model ComplianceControl {
+  id            String                  @id @default(uuid()) @db.Uuid
+  frameworkId   String                  @map("framework_id") @db.Uuid
+  controlNumber String                 @map("control_number") @db.VarChar(50)
+  title         String                  @db.VarChar(500)
+  description   String?                 @db.Text
+  status        ComplianceControlStatus @default(not_assessed)
+  evidence      String?                 @db.Text
+  assessedAt    DateTime?               @map("assessed_at")
+  assessedBy    String?                 @map("assessed_by") @db.VarChar(320)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  framework ComplianceFramework @relation(fields: [frameworkId], references: [id], onDelete: Cascade)
+
+  @@unique([frameworkId, controlNumber])
+  @@index([frameworkId])
+  @@index([frameworkId, status])
+  @@map("compliance_controls")
+}
+
+// ─── Reports ────────────────────────────────────────────────
+
+model Report {
+  id          String       @id @default(uuid()) @db.Uuid
+  tenantId    String       @map("tenant_id") @db.Uuid
+  templateId  String?      @map("template_id") @db.Uuid
+  name        String       @db.VarChar(255)
+  description String?      @db.Text
+  type        ReportType   @default(custom)
+  module      ReportModule?
+  templateKey ReportTemplateKey? @map("template_key")
+  format      ReportFormat @default(pdf)
+  status      ReportStatus @default(generating)
+  generatedBy String       @map("generated_by") @db.VarChar(320)
+  parameters  Json?
+  filterSnapshot Json?     @map("filter_snapshot")
+  fileUrl          String?      @map("file_url") @db.VarChar(1000)
+  fileSize         BigInt?      @map("file_size")
+  generatedContent String?      @map("generated_content") @db.Text
+  generatedAt      DateTime?    @map("generated_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  template ReportTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId])
+  @@index([tenantId, type])
+  @@index([tenantId, module])
+  @@index([tenantId, status])
+  @@index([tenantId, templateKey])
+  @@index([tenantId, createdAt])
+  @@map("reports")
+}
+
+model ReportTemplate {
+  id            String            @id @default(uuid()) @db.Uuid
+  tenantId      String?           @map("tenant_id") @db.Uuid
+  key           ReportTemplateKey
+  module        ReportModule
+  name          String            @db.VarChar(255)
+  description   String?           @db.Text
+  type          ReportType        @default(custom)
+  defaultFormat ReportFormat      @default(pdf) @map("default_format")
+  parameters    Json?
+  isSystem      Boolean           @default(true) @map("is_system")
+  createdAt     DateTime          @default(now()) @map("created_at")
+  updatedAt     DateTime          @updatedAt @map("updated_at")
+
+  tenant  Tenant?  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  reports Report[]
+
+  @@index([tenantId])
+  @@index([module])
+  @@index([key])
+  @@map("report_templates")
+}
+
+// ─── System Health Checks ───────────────────────────────────
+
+model SystemHealthCheck {
+  id             String        @id @default(uuid()) @db.Uuid
+  tenantId       String        @map("tenant_id") @db.Uuid
+  serviceName    String        @map("service_name") @db.VarChar(255)
+  serviceType    ServiceType   @map("service_type")
+  status         ServiceStatus @default(unknown)
+  responseTimeMs Int?          @map("response_time_ms")
+  lastCheckedAt  DateTime      @default(now()) @map("last_checked_at")
+  errorMessage   String?       @map("error_message") @db.Text
+  metadata       Json?
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([tenantId, serviceType])
+  @@index([tenantId, status])
+  @@index([tenantId, lastCheckedAt])
+  @@map("system_health_checks")
+}
+
+// ─── System Metrics ─────────────────────────────────────────
+
+model SystemMetric {
+  id         String     @id @default(uuid()) @db.Uuid
+  tenantId   String     @map("tenant_id") @db.Uuid
+  metricName String     @map("metric_name") @db.VarChar(255)
+  metricType MetricType @map("metric_type")
+  value      Float
+  unit       String     @db.VarChar(50)
+  tags       Json?
+  recordedAt DateTime   @default(now()) @map("recorded_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([tenantId, metricType])
+  @@index([tenantId, metricName])
+  @@index([tenantId, recordedAt])
+  @@map("system_metrics")
+}
+
+// ─── Normalization Pipelines ────────────────────────────────
+
+model NormalizationPipeline {
+  id              String                      @id @default(uuid()) @db.Uuid
+  tenantId        String                      @map("tenant_id") @db.Uuid
+  name            String                      @db.VarChar(255)
+  description     String?                     @db.Text
+  sourceType      NormalizationSourceType     @map("source_type")
+  status          NormalizationPipelineStatus @default(active)
+  parserConfig    Json                        @map("parser_config")
+  fieldMappings   Json                        @map("field_mappings")
+  processedCount  BigInt                      @default(0) @map("processed_count")
+  errorCount      Int                         @default(0) @map("error_count")
+  lastProcessedAt DateTime?                   @map("last_processed_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, name])
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@index([tenantId, sourceType])
+  @@map("normalization_pipelines")
+}
+
+// ─── Detection Rules ────────────────────────────────────────
+
+model DetectionRule {
+  id                 String                @id @default(uuid()) @db.Uuid
+  tenantId           String                @map("tenant_id") @db.Uuid
+  ruleNumber         String                @unique @map("rule_number") @db.VarChar(20)
+  name               String                @db.VarChar(500)
+  description        String?               @db.Text
+  ruleType           DetectionRuleType     @map("rule_type")
+  severity           DetectionRuleSeverity @default(medium)
+  status             DetectionRuleStatus   @default(active)
+  conditions         Json
+  actions            Json
+  hitCount           Int                   @default(0) @map("hit_count")
+  falsePositiveCount Int                   @default(0) @map("false_positive_count")
+  lastTriggeredAt    DateTime?             @map("last_triggered_at")
+  createdBy          String                @map("created_by") @db.VarChar(320)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([tenantId, ruleType])
+  @@index([tenantId, severity])
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+  @@map("detection_rules")
+}
+
+// ─── Cloud Accounts ─────────────────────────────────────────
+
+model CloudAccount {
+  id              String             @id @default(uuid()) @db.Uuid
+  tenantId        String             @map("tenant_id") @db.Uuid
+  provider        CloudProvider
+  accountId       String             @map("account_id") @db.VarChar(255)
+  alias           String?            @db.VarChar(255)
+  status          CloudAccountStatus @default(connected)
+  region          String?            @db.VarChar(100)
+  lastScanAt      DateTime?          @map("last_scan_at")
+  findingsCount   Int                @default(0) @map("findings_count")
+  complianceScore Float              @default(0) @map("compliance_score")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  tenant   Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  findings CloudFinding[]
+
+  @@unique([tenantId, provider, accountId])
+  @@index([tenantId])
+  @@index([tenantId, provider])
+  @@index([tenantId, status])
+  @@map("cloud_accounts")
+}
+
+// ─── Cloud Findings ─────────────────────────────────────────
+
+model CloudFinding {
+  id               String               @id @default(uuid()) @db.Uuid
+  tenantId         String               @map("tenant_id") @db.Uuid
+  cloudAccountId   String               @map("cloud_account_id") @db.Uuid
+  resourceType     String               @map("resource_type") @db.VarChar(255)
+  resourceId       String               @map("resource_id") @db.VarChar(500)
+  severity         CloudFindingSeverity @default(medium)
+  title            String               @db.VarChar(500)
+  description      String?              @db.Text
+  status           CloudFindingStatus   @default(open)
+  remediationSteps String?              @map("remediation_steps") @db.Text
+  detectedAt       DateTime             @default(now()) @map("detected_at")
+  resolvedAt       DateTime?            @map("resolved_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  tenant       Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  cloudAccount CloudAccount @relation(fields: [cloudAccountId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([tenantId, severity])
+  @@index([tenantId, status])
+  @@index([cloudAccountId])
+  @@index([tenantId, detectedAt])
+  @@map("cloud_findings")
+}
+
+// ─── Job Queue ─────────────────────────────────────────────
+
+enum JobStatus {
+  pending
+  running
+  completed
+  failed
+  retrying
+  cancelled
+}
+
+enum JobType {
+  connector_sync
+  detection_rule_execution
+  correlation_rule_execution
+  normalization_pipeline
+  soar_playbook
+  hunt_execution
+  ai_agent_task
+  report_generation
+  memory_extraction
+}
+
+model Job {
+  id             String    @id @default(uuid()) @db.Uuid
+  tenantId       String    @map("tenant_id") @db.Uuid
+  type           JobType
+  status         JobStatus @default(pending)
+  payload        Json      @default("{}")
+  result         Json?
+  error          String?   @db.Text
+  attempts       Int       @default(0)
+  maxAttempts    Int       @default(3) @map("max_attempts")
+  idempotencyKey String?   @map("idempotency_key") @db.VarChar(255)
+  scheduledAt    DateTime? @map("scheduled_at")
+  startedAt      DateTime? @map("started_at")
+  completedAt    DateTime? @map("completed_at")
+  createdBy      String?   @map("created_by") @db.VarChar(320)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, idempotencyKey])
+  @@index([tenantId, type, status])
+  @@index([status, scheduledAt])
+  @@map("jobs")
+}
+
+// ─── LLM Connectors (Dynamic) ──────────────────────────────
+
+model LlmConnector {
+  id              String    @id @default(uuid()) @db.Uuid
+  tenantId        String    @map("tenant_id") @db.Uuid
+  name            String    @db.VarChar(255)
+  description     String?   @db.VarChar(500)
+  enabled         Boolean   @default(false)
+  baseUrl         String    @map("base_url") @db.VarChar(500)
+  encryptedApiKey String    @map("encrypted_api_key") @db.Text
+  defaultModel    String?   @map("default_model") @db.VarChar(255)
+  organizationId  String?   @map("organization_id") @db.VarChar(255)
+  maxTokensParam  String    @default("max_tokens") @map("max_tokens_param") @db.VarChar(50)
+  timeout         Int       @default(60000)
+  lastTestAt      DateTime? @map("last_test_at")
+  lastTestOk      Boolean?  @map("last_test_ok")
+  lastError       String?   @map("last_error") @db.Text
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, name])
+  @@index([tenantId])
+  @@index([tenantId, enabled])
+  @@map("llm_connectors")
+}
+
+// ─── AI Prompt Templates ────────────────────────────────────
+
+model AiPromptTemplate {
+  id         String    @id @default(uuid()) @db.Uuid
+  tenantId   String    @map("tenant_id") @db.Uuid
+  taskType   String    @map("task_type") @db.VarChar(100)
+  version    Int       @default(1)
+  name       String    @db.VarChar(255)
+  content    String    @db.Text
+  isActive   Boolean   @default(true) @map("is_active")
+  createdBy  String    @map("created_by") @db.VarChar(320)
+  reviewedBy String?   @map("reviewed_by") @db.VarChar(320)
+  reviewedAt DateTime? @map("reviewed_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, taskType, version])
+  @@index([tenantId, taskType])
+  @@index([tenantId, taskType, isActive])
+  @@map("ai_prompt_templates")
+}
+
+// ─── AI Feature Configs ─────────────────────────────────────
+
+model AiFeatureConfig {
+  id                 String   @id @default(uuid()) @db.Uuid
+  tenantId           String   @map("tenant_id") @db.Uuid
+  featureKey         String   @map("feature_key") @db.VarChar(100)
+  enabled            Boolean  @default(true)
+  preferredProvider  String?  @map("preferred_provider") @db.VarChar(100)
+  maxTokens          Int      @default(2048) @map("max_tokens")
+  approvalLevel      String   @default("none") @map("approval_level") @db.VarChar(50)
+  monthlyTokenBudget Int?     @map("monthly_token_budget")
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, featureKey])
+  @@index([tenantId])
+  @@index([tenantId, featureKey, enabled])
+  @@map("ai_feature_configs")
+}
+
+// ─── AI Usage Ledger ───────────────────────────────────────
+
+model AiUsageLedger {
+  id           String   @id @default(uuid()) @db.Uuid
+  tenantId     String   @map("tenant_id") @db.Uuid
+  featureKey   String   @map("feature_key") @db.VarChar(100)
+  provider     String   @db.VarChar(100)
+  model        String?  @db.VarChar(255)
+  inputTokens  Int      @default(0) @map("input_tokens")
+  outputTokens Int      @default(0) @map("output_tokens")
+  estimatedCost Float   @default(0) @map("estimated_cost")
+  userId       String   @map("user_id") @db.Uuid
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, createdAt])
+  @@index([tenantId, featureKey])
+  @@index([tenantId, featureKey, createdAt])
+  @@index([tenantId, userId])
+  @@index([tenantId, model])
+  @@map("ai_usage_ledger")
+}
+
+// ─── AI Cost Rates ──────────────────────────────────────────
+
+model AiCostRate {
+  id              String   @id @default(uuid()) @db.Uuid
+  tenantId        String   @map("tenant_id") @db.Uuid
+  provider        String   @db.VarChar(100)
+  model           String   @db.VarChar(255)
+  inputCostPer1k  Float    @default(0.003) @map("input_cost_per_1k")
+  outputCostPer1k Float    @default(0.015) @map("output_cost_per_1k")
+  effectiveFrom   DateTime @default(now()) @map("effective_from")
+  createdBy       String   @map("created_by") @db.Uuid
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, provider, model])
+  @@index([tenantId])
+  @@map("ai_cost_rates")
+}
+
+// ─── AI Budget Alerts ───────────────────────────────────────
+
+model AiBudgetAlert {
+  id              String    @id @default(uuid()) @db.Uuid
+  tenantId        String    @map("tenant_id") @db.Uuid
+  scope           String    @default("tenant") @db.VarChar(30)
+  scopeKey        String?   @map("scope_key") @db.VarChar(100)
+  monthlyBudget   Float     @map("monthly_budget")
+  alertThresholds String    @default("50,75,90,100") @map("alert_thresholds") @db.VarChar(100)
+  lastAlertPct    Int       @default(0) @map("last_alert_pct")
+  lastAlertAt     DateTime? @map("last_alert_at")
+  enabled         Boolean   @default(true)
+  createdBy       String    @map("created_by") @db.Uuid
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, scope, scopeKey])
+  @@index([tenantId])
+  @@map("ai_budget_alerts")
+}
+
+// ─── Runbooks / Knowledge Base ──────────────────────────────
+
+model Runbook {
+  id        String   @id @default(uuid()) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  title     String   @db.VarChar(500)
+  content   String   @db.Text
+  category  String   @default("general") @db.VarChar(100)
+  tags      String[] @default([])
+  createdBy String   @map("created_by") @db.VarChar(320)
+  updatedBy String?  @map("updated_by") @db.VarChar(320)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([tenantId, category])
+  @@map("runbooks")
+}
+
+// ─── Entity Graph ──────────────────────────────────────────
+
+model Entity {
+  id          String   @id @default(uuid()) @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  type        String   @db.VarChar(50)
+  value       String   @db.VarChar(1000)
+  displayName String?  @map("display_name") @db.VarChar(500)
+  firstSeen   DateTime @default(now()) @map("first_seen")
+  lastSeen    DateTime @default(now()) @map("last_seen")
+  riskScore   Float    @default(0) @map("risk_score")
+  metadata    Json?    @default("{}")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  tenant        Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  relationsFrom EntityRelation[] @relation("from_entity")
+  relationsTo   EntityRelation[] @relation("to_entity")
+
+  @@unique([tenantId, type, value])
+  @@index([tenantId])
+  @@index([tenantId, type])
+  @@index([tenantId, riskScore])
+  @@map("entities")
+}
+
+model EntityRelation {
+  id           String   @id @default(uuid()) @db.Uuid
+  tenantId     String   @map("tenant_id") @db.Uuid
+  fromEntityId String   @map("from_entity_id") @db.Uuid
+  toEntityId   String   @map("to_entity_id") @db.Uuid
+  relationType String   @map("relation_type") @db.VarChar(100)
+  confidence   Float    @default(1.0)
+  source       String?  @db.VarChar(255)
+  metadata     Json?    @default("{}")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  tenant     Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  fromEntity Entity @relation("from_entity", fields: [fromEntityId], references: [id], onDelete: Cascade)
+  toEntity   Entity @relation("to_entity", fields: [toEntityId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([fromEntityId])
+  @@index([toEntityId])
+  @@index([tenantId, relationType])
+  @@map("entity_relations")
+}
+
+// ─── Tenant Agent Configuration ─────────────────────────────
+
+model TenantAgentConfig {
+  id                String    @id @default(uuid()) @db.Uuid
+  tenantId          String    @map("tenant_id") @db.Uuid
+  agentId           String    @map("agent_id") @db.VarChar(50)
+  isEnabled         Boolean   @default(true) @map("is_enabled")
+  providerMode      String    @default("default") @map("provider_mode") @db.VarChar(100)
+  model             String?   @db.VarChar(255)
+  temperature       Float     @default(0.7)
+  maxTokensPerCall  Int       @default(2048) @map("max_tokens_per_call")
+  systemPrompt      String?   @map("system_prompt") @db.Text
+  promptSuffix      String?   @map("prompt_suffix") @db.Text
+  indexPatterns     String[]  @default([]) @map("index_patterns")
+  tokensPerHour     Int       @default(50000) @map("tokens_per_hour")
+  tokensPerDay      Int       @default(500000) @map("tokens_per_day")
+  tokensPerMonth    Int       @default(5000000) @map("tokens_per_month")
+  tokensUsedHour    Int       @default(0) @map("tokens_used_hour")
+  tokensUsedDay     Int       @default(0) @map("tokens_used_day")
+  tokensUsedMonth   Int       @default(0) @map("tokens_used_month")
+  maxConcurrentRuns Int       @default(3) @map("max_concurrent_runs")
+  triggerMode       String    @default("manual_only") @map("trigger_mode") @db.VarChar(30)
+  triggerConfig     Json      @default("{}") @map("trigger_config")
+  osintSources      Json      @default("[]") @map("osint_sources")
+  outputFormat      String    @default("markdown") @map("output_format") @db.VarChar(20)
+  presentationSkills String[] @default([]) @map("presentation_skills")
+  lastResetHour     DateTime? @map("last_reset_hour")
+  lastResetDay      DateTime? @map("last_reset_day")
+  lastResetMonth    DateTime? @map("last_reset_month")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, agentId])
+  @@index([tenantId])
+  @@index([tenantId, agentId, isEnabled])
+  @@map("tenant_agent_configs")
+}
+
+// ─── OSINT Source Configuration ─────────────────────────────
+
+model OsintSourceConfig {
+  id              String    @id @default(uuid()) @db.Uuid
+  tenantId        String    @map("tenant_id") @db.Uuid
+  sourceType      String    @map("source_type") @db.VarChar(50)
+  name            String    @db.VarChar(255)
+  isEnabled       Boolean   @default(true) @map("is_enabled")
+  encryptedApiKey String?   @map("encrypted_api_key") @db.Text
+  baseUrl         String?   @map("base_url") @db.VarChar(500)
+  authType        String    @default("none") @map("auth_type") @db.VarChar(30)
+  headerName      String?   @map("header_name") @db.VarChar(100)
+  queryParamName  String?   @map("query_param_name") @db.VarChar(100)
+  responsePath    String?   @map("response_path") @db.VarChar(500)
+  requestMethod   String    @default("GET") @map("request_method") @db.VarChar(10)
+  timeout         Int       @default(30000)
+  lastTestAt      DateTime? @map("last_test_at")
+  lastTestOk      Boolean?  @map("last_test_ok")
+  lastError       String?   @map("last_error") @db.Text
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, sourceType, name])
+  @@index([tenantId])
+  @@index([tenantId, sourceType])
+  @@map("osint_source_configs")
+}
+
+// ─── AI Approval Requests ───────────────────────────────────
+
+model AiApprovalRequest {
+  id          String    @id @default(uuid()) @db.Uuid
+  tenantId    String    @map("tenant_id") @db.Uuid
+  agentId     String    @map("agent_id") @db.VarChar(50)
+  actionType  String    @map("action_type") @db.VarChar(100)
+  actionData  Json      @map("action_data")
+  riskLevel   String    @default("medium") @map("risk_level") @db.VarChar(20)
+  status      String    @default("pending") @db.VarChar(20)
+  requestedBy String    @map("requested_by") @db.VarChar(320)
+  reviewedBy  String?   @map("reviewed_by") @db.VarChar(320)
+  reviewedAt  DateTime? @map("reviewed_at")
+  comment     String?   @db.Text
+  result      Json?
+  expiresAt   DateTime  @map("expires_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@index([tenantId, agentId])
+  @@map("ai_approval_requests")
+}
+
+// ─── AI Execution Findings ─────────────────────────────────
+
+model AiExecutionFinding {
+  id              String    @id @default(uuid()) @db.Uuid
+  tenantId        String    @map("tenant_id") @db.Uuid
+  sessionId       String    @map("session_id") @db.Uuid
+  agentId         String    @map("agent_id") @db.VarChar(50)
+  sourceModule    String    @map("source_module") @db.VarChar(50)
+  sourceEntityId  String?   @map("source_entity_id") @db.VarChar(255)
+  findingType     String    @map("finding_type") @db.VarChar(50)
+  title           String    @db.VarChar(500)
+  summary         String    @db.Text
+  confidenceScore Float?    @map("confidence_score")
+  severity        String?   @db.VarChar(20)
+  evidenceJson    Json?     @map("evidence_json")
+  recommendedAction String? @map("recommended_action") @db.Text
+  status          String    @default("proposed") @db.VarChar(20)
+  appliedAt       DateTime? @map("applied_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  searchVector    Unsupported("tsvector")? @map("search_vector")
+
+  tenant      Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  outputLinks AiFindingOutputLink[]
+
+  @@index([tenantId])
+  @@index([tenantId, sessionId])
+  @@index([tenantId, sourceModule, sourceEntityId])
+  @@index([tenantId, agentId])
+  @@index([tenantId, findingType])
+  @@index([tenantId, createdAt(sort: Desc)])
+  @@index([tenantId, severity])
+  @@index([tenantId, status, createdAt(sort: Desc)])
+  @@map("ai_execution_findings")
+}
+
+// ─── AI Agent Schedules ───────────────────────────────────
+
+model AiAgentSchedule {
+  id                  String    @id @default(uuid()) @db.Uuid
+  tenantId            String?   @map("tenant_id") @db.Uuid
+  agentId             String    @map("agent_id") @db.VarChar(50)
+  seedKey             String    @unique @map("seed_key") @db.VarChar(100)
+  module              String    @db.VarChar(50)
+  cronExpression      String    @map("cron_expression") @db.VarChar(100)
+  timezone            String    @default("UTC") @db.VarChar(50)
+  isEnabled           Boolean   @default(false) @map("is_enabled")
+  isPaused            Boolean   @default(false) @map("is_paused")
+  executionMode       String    @default("suggest_only") @map("execution_mode") @db.VarChar(30)
+  riskMode            String    @default("low") @map("risk_mode") @db.VarChar(20)
+  approvalMode        String    @default("not_required") @map("approval_mode") @db.VarChar(30)
+  maxConcurrency      Int       @default(1) @map("max_concurrency")
+  allowOverlap        Boolean   @default(false) @map("allow_overlap")
+  dedupeWindowSeconds Int       @default(300) @map("dedupe_window_seconds")
+  providerPreference  String?   @map("provider_preference") @db.VarChar(50)
+  modelPreference     String?   @map("model_preference") @db.VarChar(100)
+  scopeJson           Json?     @map("scope_json")
+  isSystemDefault     Boolean   @default(false) @map("is_system_default")
+  lastRunAt           DateTime? @map("last_run_at")
+  nextRunAt           DateTime? @map("next_run_at")
+  lastStatus          String?   @map("last_status") @db.VarChar(20)
+  lastDurationMs      Int?      @map("last_duration_ms")
+  failureStreak       Int       @default(0) @map("failure_streak")
+  successStreak       Int       @default(0) @map("success_streak")
+  disabledReason      String?   @map("disabled_reason") @db.Text
+  createdBy           String?   @map("created_by") @db.VarChar(320)
+  updatedBy           String?   @map("updated_by") @db.VarChar(320)
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+
+  tenant Tenant? @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([isEnabled, isPaused])
+  @@index([module])
+  @@index([agentId])
+  @@index([nextRunAt])
+  @@map("ai_agent_schedules")
+}
+
+// ─── AI Schedule Templates ───────────────────────────────
+
+model AiScheduleTemplate {
+  id                      String   @id @default(uuid()) @db.Uuid
+  jobKey                  String   @unique @map("job_key") @db.VarChar(80)
+  displayName             String   @map("display_name") @db.VarChar(255)
+  description             String   @default("") @db.Text
+  sourceModule            String   @map("source_module") @db.VarChar(50)
+  targetModule            String   @map("target_module") @db.VarChar(50)
+  defaultCron             String   @map("default_cron") @db.VarChar(100)
+  defaultTimezone         String   @default("UTC") @map("default_timezone") @db.VarChar(50)
+  defaultEnabled          Boolean  @default(false) @map("default_enabled")
+  defaultConcurrency      Int      @default(1) @map("default_concurrency")
+  defaultTimeoutSeconds   Int      @default(300) @map("default_timeout_seconds")
+  defaultRetryMax         Int      @default(2) @map("default_retry_max")
+  defaultApprovalMode     String   @default("not_required") @map("default_approval_mode") @db.VarChar(30)
+  defaultRiskMode         String   @default("low") @map("default_risk_mode") @db.VarChar(20)
+  defaultExecutionMode    String   @default("suggest_only") @map("default_execution_mode") @db.VarChar(30)
+  defaultNotificationMode String   @default("on_failure") @map("default_notification_mode") @db.VarChar(30)
+  defaultVisibilityMode   String   @default("findings_panel") @map("default_visibility_mode") @db.VarChar(30)
+  triggerType             String   @default("scheduled") @map("trigger_type") @db.VarChar(20)
+  outputEntityType        String?  @map("output_entity_type") @db.VarChar(50)
+  outputDestination       String   @default("ai_execution_findings") @map("output_destination") @db.VarChar(100)
+  tenantOverrideAllowed   Boolean  @default(true) @map("tenant_override_allowed")
+  createdAt               DateTime @default(now()) @map("created_at")
+  updatedAt               DateTime @default(now()) @map("updated_at")
+
+  @@index([sourceModule])
+  @@index([targetModule])
+  @@map("ai_schedule_templates")
+}
+
+// ─── AI Finding Output Links ─────────────────────────────
+
+model AiFindingOutputLink {
+  id               String   @id @default(uuid()) @db.Uuid
+  tenantId         String   @map("tenant_id") @db.Uuid
+  findingId        String   @map("finding_id") @db.Uuid
+  jobId            String?  @map("job_id") @db.Uuid
+  linkedModule     String   @map("linked_module") @db.VarChar(50)
+  linkedEntityType String   @map("linked_entity_type") @db.VarChar(50)
+  linkedEntityId   String   @map("linked_entity_id") @db.VarChar(255)
+  relationshipType String   @default("produced_by") @map("relationship_type") @db.VarChar(30)
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  tenant  Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  finding AiExecutionFinding @relation(fields: [findingId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([findingId])
+  @@index([tenantId, linkedModule, linkedEntityId])
+  @@index([jobId])
+  @@map("ai_finding_output_links")
+}
+
+// ─── AI Job Run Summaries ────────────────────────────────
+
+model AiJobRunSummary {
+  id              String    @id @default(uuid()) @db.Uuid
+  tenantId        String    @map("tenant_id") @db.Uuid
+  jobId           String    @map("job_id") @db.Uuid
+  scheduleId      String?   @map("schedule_id") @db.Uuid
+  jobKey          String    @map("job_key") @db.VarChar(80)
+  agentId         String?   @map("agent_id") @db.VarChar(50)
+  triggerType     String    @default("scheduled") @map("trigger_type") @db.VarChar(30)
+  status          String    @default("pending") @db.VarChar(20)
+  startedAt       DateTime? @map("started_at")
+  completedAt     DateTime? @map("completed_at")
+  durationMs      Int?      @map("duration_ms")
+  providerKey     String?   @map("provider_key") @db.VarChar(100)
+  modelKey        String?   @map("model_key") @db.VarChar(255)
+  tokensUsed      Int       @default(0) @map("tokens_used")
+  findingsCount   Int       @default(0) @map("findings_count")
+  writebacksCount Int       @default(0) @map("writebacks_count")
+  sourceModule    String?   @map("source_module") @db.VarChar(50)
+  sourceEntityId  String?   @map("source_entity_id") @db.VarChar(255)
+  summaryText     String?   @map("summary_text") @db.Text
+  confidenceScore Float?    @map("confidence_score")
+  errorMessage    String?   @map("error_message") @db.Text
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([jobId])
+  @@index([scheduleId])
+  @@index([tenantId, jobKey])
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt(sort: Desc)])
+  @@map("ai_job_run_summaries")
+}
+
+// ─── AI Chat Threads ─────────────────────────────────────
+
+model AiChatThread {
+  id              String    @id @default(uuid()) @db.Uuid
+  tenantId        String    @map("tenant_id") @db.Uuid
+  userId          String    @map("user_id") @db.Uuid
+  connectorId     String?   @map("connector_id") @db.Uuid
+  title           String?   @db.VarChar(255)
+  model           String?   @db.VarChar(255)
+  provider        String?   @db.VarChar(100)
+  outputFormat    String    @default("plain_text") @map("output_format") @db.VarChar(30)
+  temperature     Float     @default(0.7)
+  maxTokens       Int       @default(16384) @map("max_tokens")
+  systemPrompt    String?   @map("system_prompt") @db.Text
+  messageCount    Int       @default(0) @map("message_count")
+  totalTokensUsed Int       @default(0) @map("total_tokens_used")
+  lastActivityAt  DateTime  @default(now()) @map("last_activity_at")
+  isArchived       Boolean   @default(false) @map("is_archived")
+  legalHold        Boolean   @default(false) @map("legal_hold")
+  complianceStatus String    @default("none") @map("compliance_status") @db.VarChar(30)
+  redactedAt       DateTime? @map("redacted_at")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  messages AiChatMessage[]
+  tenant   Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user     User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, userId])
+  @@index([tenantId, userId, lastActivityAt(sort: Desc)])
+  @@index([tenantId, isArchived])
+  @@index([tenantId, legalHold])
+  @@map("ai_chat_threads")
+}
+
+// ─── AI Chat Messages ────────────────────────────────────
+
+model AiChatMessage {
+  id                 String   @id @default(uuid()) @db.Uuid
+  threadId           String   @map("thread_id") @db.Uuid
+  tenantId           String   @map("tenant_id") @db.Uuid
+  role               String   @db.VarChar(20)
+  content            String   @db.Text
+  requestedModel     String?  @map("requested_model") @db.VarChar(255)
+  requestedProvider  String?  @map("requested_provider") @db.VarChar(100)
+  model              String?  @db.VarChar(255)
+  provider           String?  @db.VarChar(100)
+  fallbackModel      String?  @map("fallback_model") @db.VarChar(255)
+  fallbackReason     String?  @map("fallback_reason") @db.VarChar(500)
+  status             String   @default("completed") @db.VarChar(20)
+  inputTokens        Int      @default(0) @map("input_tokens")
+  outputTokens       Int      @default(0) @map("output_tokens")
+  durationMs         Int?     @map("duration_ms")
+  sequenceNum        Int      @map("sequence_num")
+  createdAt          DateTime @default(now()) @map("created_at")
+
+  thread AiChatThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  tenant Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([threadId, sequenceNum])
+  @@index([threadId, createdAt])
+  @@index([tenantId])
+  @@map("ai_chat_messages")
+}
+
+// ─── User Memory (Cross-Chat Long-Term Context) ─────────────
+
+model UserMemory {
+  id          String    @id @default(uuid()) @db.Uuid
+  tenantId    String    @map("tenant_id") @db.Uuid
+  userId      String    @map("user_id") @db.Uuid
+  content     String    @db.Text
+  category    String    @default("fact") @db.VarChar(50)
+  embedding   Float[]
+  sourceType  String    @map("source_type") @db.VarChar(50)
+  sourceId    String?   @map("source_id") @db.Uuid
+  sourceLabel String?   @map("source_label") @db.VarChar(255)
+  isDeleted   Boolean   @default(false) @map("is_deleted")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, userId])
+  @@index([tenantId, userId, isDeleted])
+  @@index([tenantId, userId, updatedAt(sort: Desc)])
+  @@index([tenantId, isDeleted, updatedAt])
+  @@map("user_memories")
+}
+
+// ─── Memory Retention Policy ────────────────────────────────
+
+model MemoryRetentionPolicy {
+  id              String   @id @default(uuid()) @db.Uuid
+  tenantId        String   @map("tenant_id") @db.Uuid
+  retentionDays   Int      @default(0) @map("retention_days")
+  autoCleanup     Boolean  @default(false) @map("auto_cleanup")
+  lastCleanupAt   DateTime? @map("last_cleanup_at")
+  lastCleanupCount Int     @default(0) @map("last_cleanup_count")
+  createdBy       String   @map("created_by") @db.Uuid
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId])
+  @@map("memory_retention_policies")
+}
+
+// ─── AI Transcript Policy ───────────────────────────────
+
+model AiTranscriptPolicy {
+  id                    String    @id @default(uuid()) @db.Uuid
+  tenantId              String    @map("tenant_id") @db.Uuid
+  chatRetentionDays     Int       @default(0) @map("chat_retention_days")
+  auditRetentionDays    Int       @default(0) @map("audit_retention_days")
+  autoRedactPii         Boolean   @default(false) @map("auto_redact_pii")
+  requireLegalHold      Boolean   @default(false) @map("require_legal_hold")
+  lastCleanupAt         DateTime? @map("last_cleanup_at")
+  lastCleanupCount      Int       @default(0) @map("last_cleanup_count")
+  createdBy             String    @map("created_by") @db.Uuid
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId])
+  @@map("ai_transcript_policies")
+}
+
+// ─── AI Evaluation Lab ──────────────────────────────────
+
+model AiEvalSuite {
+  id          String   @id @default(uuid()) @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  name        String   @db.VarChar(255)
+  description String?  @db.Text
+  datasetJson Json     @map("dataset_json")
+  createdBy   String   @map("created_by") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  runs   AiEvalRun[]
+
+  @@index([tenantId])
+  @@map("ai_eval_suites")
+}
+
+model AiEvalRun {
+  id           String    @id @default(uuid()) @db.Uuid
+  tenantId     String    @map("tenant_id") @db.Uuid
+  suiteId      String    @map("suite_id") @db.Uuid
+  provider     String    @db.VarChar(100)
+  model        String    @db.VarChar(255)
+  status       String    @default("pending") @db.VarChar(30)
+  totalCases   Int       @default(0) @map("total_cases")
+  passedCases  Int       @default(0) @map("passed_cases")
+  failedCases  Int       @default(0) @map("failed_cases")
+  avgScore     Float?    @map("avg_score")
+  avgLatencyMs Float?    @map("avg_latency_ms")
+  totalTokens  Int       @default(0) @map("total_tokens")
+  resultsJson  Json?     @map("results_json")
+  errorMessage String?   @map("error_message") @db.Text
+  startedAt    DateTime? @map("started_at")
+  completedAt  DateTime? @map("completed_at")
+  createdBy    String    @map("created_by") @db.Uuid
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  tenant Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  suite  AiEvalSuite @relation(fields: [suiteId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([suiteId])
+  @@map("ai_eval_runs")
+}
+
+// ─── AI Simulation & Backtesting ────────────────────────
+
+model AiSimulation {
+  id             String    @id @default(uuid()) @db.Uuid
+  tenantId       String    @map("tenant_id") @db.Uuid
+  name           String    @db.VarChar(255)
+  description    String?   @db.Text
+  agentId        String    @map("agent_id") @db.VarChar(50)
+  datasetJson    Json      @map("dataset_json")
+  status         String    @default("pending") @db.VarChar(30)
+  totalCases     Int       @default(0) @map("total_cases")
+  completedCases Int       @default(0) @map("completed_cases")
+  resultsJson    Json?     @map("results_json")
+  avgScore       Float?    @map("avg_score")
+  avgLatencyMs   Float?    @map("avg_latency_ms")
+  totalTokens    Int       @default(0) @map("total_tokens")
+  errorMessage   String?   @map("error_message") @db.Text
+  startedAt      DateTime? @map("started_at")
+  completedAt    DateTime? @map("completed_at")
+  createdBy      String    @map("created_by") @db.Uuid
+  createdAt      DateTime  @default(now()) @map("created_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([tenantId, agentId])
+  @@map("ai_simulations")
+}

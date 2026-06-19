@@ -1,0 +1,6 @@
+{
+  "buildCommand": "npx prisma generate && node scripts/resolve-failed-migrations.mjs && npx prisma migrate deploy && npm run build && npm run prisma:seed",
+  "installCommand": "npm install",
+  "outputDirectory": "dist",
+  "rewrites": [{ "source": "/(.*)", "destination": "/main.js" }]
+}

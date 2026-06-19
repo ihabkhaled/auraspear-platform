@@ -1,0 +1,131 @@
+# AuraSpear SOC Backend — Cursor Rules
+
+## Tech Stack
+- NestJS 11 + TypeScript strict mode
+- PostgreSQL via Prisma ORM
+- Redis via ioredis
+- Zod for DTO validation (no class-validator)
+- JWT auth with access/refresh tokens
+- Helmet, Throttler, SSRF protection
+- AES-256-GCM encryption for connector configs
+
+## Absolute Rules — NEVER Violate
+
+1. NEVER use `any` — use `unknown`, generics, or proper types
+2. NEVER disable ESLint rules — no `// eslint-disable`, no `@ts-ignore`
+3. NEVER use `==` or `!=` — always `===` and `!==`
+4. NEVER use `var` — use `const` or `let`
+5. NEVER use `!` (non-null assertion) — use proper null checks
+6. NEVER use `console.log` — use NestJS Logger service
+7. NEVER use `eval()`, `new Function()`, or `setTimeout('code')`
+8. NEVER return data from another tenant — every query MUST be scoped by tenantId
+9. NEVER use string concatenation — use template literals
+10. NEVER use `Buffer()` constructor — use `Buffer.alloc()` or `Buffer.from()`
+11. NEVER import without `node:` prefix — use `node:crypto`, `node:fs`, etc.
+12. NEVER use plain text string literals for comparisons — always use enums
+13. NEVER define interfaces/types inline in service/controller files — move to `*.types.ts`
+14. NEVER define constants inline — move to constants files
+15. Seeders MUST be idempotent — use upsert or skipDuplicates, safe for production
+16. NEVER use `@UsePipes()` at method level when `@Param()` is present — apply pipe on `@Body()` directly: `@Body(new ZodValidationPipe(Schema)) dto: Dto`
+17. EVERY exception MUST use `BusinessException` with specific `messageKey` — never throw raw NestJS exceptions (UnauthorizedException, etc.)
+18. EVERY API error response MUST include `messageKey` for frontend i18n — pattern: `errors.<module>.<specificAction>`
+19. NEVER use `@Query()` with a DTO type directly — parse manually: `Schema.parse(rawQuery)`
+
+## Architecture
+- Pattern: Backend-for-Frontend (BFF)
+- Frontend never calls Wazuh/OpenSearch/MISP directly
+- All connector configs encrypted at rest (AES-256-GCM)
+- Multi-tenant with row-level isolation via tenantId FK
+
+## Error Handling
+- Always use `BusinessException(status, message, 'errors.module.key')` for business errors
+- GlobalExceptionFilter catches all exceptions and ensures messageKey is present
+- Status-based fallback messageKeys exist but specific keys are preferred
+- ZodValidationPipe returns field-level errors in `errors[]` array
+
+## File Organization
+- Enums: `src/common/interfaces/` or module-level `*.types.ts`
+- Types: `<module>.types.ts` or `src/common/interfaces/`
+- Constants: `src/common/constants/` or module-level
+- DTOs: `<module>/dto/*.dto.ts` (Zod schemas + inferred types)
+
+## Validation
+- All DTOs use Zod schemas (not class-validator)
+- Apply ZodValidationPipe on `@Body()` parameter, not method level
+- For `@Query()` params: parse manually with `Schema.parse(rawQuery)` or use individual `@Query('key')` params
+- Number coercion: `z.coerce.number()` for query string values
+
+## Database
+- All queries scoped by tenantId
+- Use Prisma client with proper transaction handling
+- Raw SQL only for complex aggregations (GROUP BY, unnest, etc.)
+- Seed data must be idempotent (upsert/skipDuplicates)
+
+## Security Rules — NEVER Violate
+
+### Authentication & Authorization
+- NEVER bypass authentication in any environment — no dev mode auth bypass, no fake users, no skipping JWT verification regardless of NODE_ENV
+- NEVER use hardcoded or fallback secrets — encryption keys, JWT secrets, API keys must come from env vars, fail at startup if missing
+- JWT signing MUST specify `{ algorithm: 'HS256' }`, verification MUST specify `{ algorithms: ['HS256'] }` — prevent algorithm confusion attacks
+- `validateUserActive()` MUST check membership status (not just user existence) — query memberships with `where: { status: 'active' }`
+- EVERY mutation endpoint MUST have `@UseGuards(RolesGuard)` and `@Roles(UserRole.MINIMUM_ROLE)` — no unguarded POST/PATCH/PUT/DELETE
+
+### Data Isolation & Access Control
+- EVERY Prisma `update()` and `delete()` MUST include `tenantId` in the where clause — never update/delete by `id` alone
+- SSRF protection via `validateUrl()` utility
+- All connector configs encrypted before storage (AES-256-GCM)
+- JWT tokens verified on every request via AuthGuard
+- Role-based access via RolesGuard with hierarchy check
+- Tenant isolation via TenantGuard
+
+### Input Validation
+- EVERY Zod string field MUST have `.max()` limit — use DB column size as guide
+- EVERY Zod array field MUST have `.max()` limit — unbounded arrays enable DoS
+- Elasticsearch queries MUST be sanitized — strip `script`, `_search`, `_mapping`, `_cluster` patterns, limit length, use `allow_leading_wildcard: false`
+
+### Rate Limiting & Resource Protection
+- Auth endpoints MUST have strict rate limiting — login: 5 req/min, refresh: 10 req/min
+- AI endpoints MUST have rate limiting — 10 req/min at controller level
+- Request body size MUST be limited — `express.json({ limit: '1mb' })` in main.ts
+- Database batch operations MUST be chunked (50 per batch) — never fire hundreds of concurrent Prisma operations
+
+### Token Revocation & JWT Security
+- Token revocation MUST use server-side Redis blacklist — on logout, blacklist both access and refresh JTIs via `TokenBlacklistService`
+- EVERY JWT MUST include `jti` (UUID) and `tokenType` (`access` or `refresh`) claims — verify tokenType on every validation
+- Access tokens: 15m expiry. Refresh tokens: 7d expiry. Both blacklisted on logout with remaining TTL.
+- `verifyAccessToken()` and `verifyRefreshToken()` are async — they check Redis blacklist after JWT signature verification
+
+### Connector Config Validation
+- EVERY connector config MUST be validated with per-type Zod schemas before encryption — call `validateConnectorConfig(type, config)` in `connector.dto.ts`
+- Supported types: wazuh, graylog, logstash, velociraptor, grafana, influxdb, misp, shuffle, bedrock
+- Each type has its own Zod schema (e.g., `WazuhConfigSchema`, `GraylogConfigSchema`)
+
+### State Machine & Data Integrity
+- Hunt run state transitions MUST follow valid state machine — only `running` → `completed` or `running` → `error`
+- Case number generation MUST use `pg_advisory_xact_lock` in a Prisma `$transaction` — prevents race conditions
+- Case owner MUST be validated as active tenant member before create/update
+- Linked alert IDs MUST belong to the same tenant before creating case associations
+- AI investigation MUST validate alert belongs to caller's tenant — no cross-tenant alert investigation
+
+### Error & Response Security
+- Error messages MUST NOT leak internal paths — sanitize by stripping file paths and truncating to 500 chars
+- Source maps MUST be disabled in production — `tsconfig.build.json` has `"sourceMap": false`
+- TLS verification warnings MUST be logged when `rejectUnauthorized: false` is used
+
+### Infrastructure
+- Prisma connection pool: `connection_limit=20&pool_timeout=10` appended to DATABASE_URL in `PrismaService`
+- Health check Redis: one shared instance per `HealthService` — never per-request connections
+- X-Request-ID middleware in `main.ts` — generates UUID if missing, propagates to response header
+- Helmet CSP: default-src self, script-src self, frame-ancestors none
+- HSTS: 1 year, includeSubDomains, preload
+- CORS origins validated as proper URLs via `new URL()` — production requires non-empty list
+- Request timeout: 30s via `server.setTimeout(30_000)`
+
+## Internationalization (i18n)
+
+- EVERY `messageKey` in `BusinessException` MUST have translations in ALL 6 language files
+- Language files: `en.json`, `ar.json`, `es.json`, `fr.json`, `de.json`, `it.json`
+- Location: frontend `src/i18n/` directory
+- Pattern: `errors.<module>.<specificAction>` (e.g., `errors.auth.tokenRevoked`)
+- When adding ANY new error messageKey, ALWAYS add the translation to ALL 6 language files — missing translations cause frontend display errors
+- When adding ANY new UI text, label, or message, ALWAYS add to ALL 6 language files

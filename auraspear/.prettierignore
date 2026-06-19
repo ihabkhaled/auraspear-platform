@@ -1,0 +1,22 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+.next/
+out/
+build/
+dist/
+coverage/
+
+# Generated files
+next-env.d.ts
+public/mockServiceWorker.js
+package-lock.json
+pnpm-lock.yaml
+
+# Reports
+eslint-reports/
+
+# IDE
+.vscode/
+.idea/

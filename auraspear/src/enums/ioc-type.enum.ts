@@ -1,0 +1,16 @@
+export enum IOCType {
+  IP = 'ip',
+  DOMAIN = 'domain',
+  URL = 'url',
+  MD5 = 'md5',
+  SHA1 = 'sha1',
+  SHA256 = 'sha256',
+  HASH = 'hash',
+  FILE_NAME = 'file_name',
+  CIDR = 'cidr',
+  EMAIL = 'email',
+  ASN = 'asn',
+  CVE = 'cve',
+  REGISTRY_KEY = 'registry_key',
+  FILE_PATH = 'file_path',
+}

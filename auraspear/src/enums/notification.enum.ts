@@ -1,0 +1,23 @@
+export enum NotificationType {
+  MENTION = 'mention',
+  CASE_ASSIGNED = 'case_assigned',
+  CASE_UNASSIGNED = 'case_unassigned',
+  CASE_COMMENT_ADDED = 'case_comment_added',
+  CASE_TASK_ADDED = 'case_task_added',
+  CASE_ARTIFACT_ADDED = 'case_artifact_added',
+  CASE_STATUS_CHANGED = 'case_status_changed',
+  CASE_UPDATED = 'case_updated',
+  TENANT_ASSIGNED = 'tenant_assigned',
+  ROLE_CHANGED = 'role_changed',
+  USER_BLOCKED = 'user_blocked',
+  USER_UNBLOCKED = 'user_unblocked',
+  USER_REMOVED = 'user_removed',
+  USER_RESTORED = 'user_restored',
+}
+
+export enum NotificationEntityType {
+  CASE_COMMENT = 'case_comment',
+  CASE = 'case',
+  TENANT = 'tenant',
+  USER = 'user',
+}

@@ -1,0 +1,33 @@
+export const PATH_LABEL_MAP: Record<string, string> = {
+  dashboard: 'nav.dashboard',
+  alerts: 'nav.alerts',
+  hunt: 'nav.hunt',
+  cases: 'nav.cases',
+  intel: 'nav.intel',
+  tenant: 'nav.tenantConfig',
+  system: 'nav.systemAdmin',
+  'role-settings': 'nav.roleSettings',
+  'users-control': 'nav.usersControl',
+  notifications: 'nav.notifications',
+  connectors: 'nav.connectors',
+  profile: 'nav.profile',
+  settings: 'nav.settings',
+  incidents: 'nav.incidents',
+  jobs: 'nav.jobs',
+  correlation: 'nav.correlation',
+  explorer: 'nav.explorer',
+  vulnerabilities: 'nav.vulnerabilities',
+  'system-health': 'nav.systemHealth',
+  'ai-agents': 'nav.aiAgents',
+  compliance: 'nav.compliance',
+  reports: 'nav.reports',
+  'attack-paths': 'nav.attackPath',
+  ueba: 'nav.ueba',
+  soar: 'nav.soar',
+  normalization: 'nav.normalization',
+  'detection-rules': 'nav.rulesEngine',
+  'cloud-security': 'nav.cloudSecurity',
+}
+
+/** Segments that are route groups only — no standalone page, skip in breadcrumbs */
+export const SKIP_SEGMENTS = new Set(['admin'])

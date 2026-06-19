@@ -1,0 +1,16 @@
+export enum OsintIocType {
+  IP = 'ip',
+  DOMAIN = 'domain',
+  HASH = 'hash',
+  MD5 = 'md5',
+  SHA1 = 'sha1',
+  SHA256 = 'sha256',
+  URL = 'url',
+  CVE = 'cve',
+  FILE_NAME = 'file_name',
+  FILE_PATH = 'file_path',
+  CIDR = 'cidr',
+  EMAIL = 'email',
+  ASN = 'asn',
+  REGISTRY_KEY = 'registry_key',
+}

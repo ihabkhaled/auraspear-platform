@@ -1,0 +1,3 @@
+export const MAX_MESSAGE_LENGTH = 2000
+export const MAX_STACK_TRACE_LENGTH = 5000
+export const MAX_METADATA_SIZE = 10000

@@ -1,0 +1,17 @@
+node_modules
+.next
+.git
+.env*.local
+.env
+!.env.example
+*.md
+.husky
+.vscode
+coverage
+test
+eslint.config*
+.prettierrc*
+docker-compose*.yml
+Dockerfile*
+public/sw.js
+public/sw.js.map

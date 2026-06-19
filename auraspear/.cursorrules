@@ -1,0 +1,350 @@
+# AuraSpear SOC Frontend — Cursor Rules
+
+These rules are STRICT and NON-NEGOTIABLE. Check them before writing ANY code.
+
+---
+
+## Tech Stack
+
+- Next.js 16 + React 19 + TypeScript 5 (App Router)
+- Tailwind CSS v4 + shadcn/ui (new-york style)
+- @tanstack/react-query for server state
+- react-hook-form + zod for forms
+- Zustand for global client state
+- next-intl for i18n (6 locales: en, es, fr, it, ar, de)
+- next-themes for dark/light mode
+- Axios (pre-configured instance with token refresh)
+- lucide-react for icons
+- sonner (Toast) + sweetalert2 (SweetAlertDialog) for notifications
+
+---
+
+## ABSOLUTE RULES — NEVER VIOLATE
+
+1. NEVER use `any` — use `unknown`, generics, or proper types
+2. NEVER disable ESLint rules — no `// eslint-disable`, no `@ts-ignore`, no `@ts-expect-error`
+3. NEVER use static Tailwind color classes for semantic colors — use status/severity class system
+4. NEVER use `<table>` directly — use `<DataTable>` from `@/components/common/DataTable`
+5. NEVER use `==` or `!=` — always `===` and `!==`
+6. NEVER use `var` — use `const` (preferred) or `let`
+7. NEVER use `!` (non-null assertion) — use `if`, `??`, `?.`
+8. NEVER use `console.log` — only `console.warn` and `console.error`
+9. NEVER hardcode user-facing text — always use `t()` from `next-intl`
+10. NEVER use string concatenation — use template literals
+11. NEVER use raw HTML `<select>`, `<input>`, `<textarea>` — use shadcn/ui components
+12. NEVER add `// eslint-disable-next-line` — fix the code instead
+13. NEVER put const/interface/enum/type inside component, hook, service, or API files — enums → `src/enums/`, types → `src/types/`, constants → `src/lib/constants/`
+14. NEVER put custom hooks inside component files — hooks → `src/hooks/`
+15. NEVER put utility functions inside component files — utils → `src/lib/`
+16. NEVER use `text-red-*`, `text-green-*`, `bg-white`, `bg-gray-*` — use semantic classes
+17. NEVER use `dark:` prefix for colors — CSS variables handle dark mode automatically
+18. NEVER filter/search client-side — all filtering must go through backend API
+19. NEVER use string literal unions — always use enums from `src/enums/`
+
+---
+
+## ARCHITECTURE — FEATURE-FIRST STRUCTURE
+
+Target architecture (non-negotiable for all new code):
+
+```
+src/
+├── app/           → global providers, router, layouts, query client, global guards
+├── pages/         → route-level composition only, NO business logic
+├── features/      → user-facing business actions, each feature owns UI/hooks/model/API/lib
+├── entities/      → reusable domain building blocks (user, tenant, connector, etc.)
+└── shared/        → reusable technical + design-system building blocks, NO feature logic
+```
+
+### Internal Feature/Entity Structure
+
+Each feature or entity directory uses this structure when relevant:
+
+```
+feature-name/
+├── api/           → request functions, query/mutation functions, DTO types, API mappers
+├── hooks/         → custom hooks, TanStack Query hooks (NO JSX)
+├── model/         → types, enums, constants, schemas, config, query keys
+├── ui/            → TSX rendering files ONLY
+├── lib/           → pure helpers, formatters, guards, transformers
+└── index.ts       → public API surface (deliberate exports)
+```
+
+---
+
+## TSX FILE RULES (CRITICAL)
+
+A TSX file may ONLY contain:
+- imports
+- component definitions
+- hook usage
+- tiny UI-only handlers
+- JSX
+- extremely small file-private UI-only constants (if truly unavoidable)
+
+A TSX file must NEVER export:
+- hooks
+- types / interfaces
+- enums
+- constants
+- schemas
+- query keys
+- config objects
+- helpers / formatters / mappers
+- validation logic
+- API calls
+- business logic
+- data normalization logic
+- long inline config maps
+- mutation / query implementation
+
+If any TSX file contains these, extract them immediately.
+
+---
+
+## MANDATORY EXTRACTION RULES
+
+Extract from TSX into dedicated files:
+- hooks → `hooks/useX.ts`
+- types/interfaces → `model/x.types.ts`
+- enums → `model/x.enums.ts`
+- constants → `model/x.consts.ts`
+- schemas → `model/x.schema.ts`
+- config → `model/x.config.ts`
+- query keys → `model/x.query-keys.ts`
+- helpers → `lib/x.helpers.ts`
+- formatters → `lib/x.formatters.ts`
+- guards → `lib/x.guards.ts`
+- mappers → `api/x.mapper.ts` or `lib/x.mapper.ts`
+
+---
+
+## NAMING CONVENTIONS
+
+Use explicit, ownership-based names:
+- `UserCard.tsx`
+- `user-card.types.ts`
+- `user-card.enums.ts`
+- `user-card.consts.ts`
+- `user-card.schema.ts`
+- `user-card.helpers.ts`
+- `useUsersQuery.ts`
+- `useCreateUserMutation.ts`
+- `useUpdateUserMutation.ts`
+- `useDeleteUserMutation.ts`
+
+AVOID vague names: `types.ts`, `utils.ts`, `helpers.ts`, `constants.ts` (unless tightly scoped in a small local folder).
+
+---
+
+## TANSTACK QUERY RULES
+
+All backend communication involving server state MUST use TanStack Query:
+
+- All GET requests → `useQuery`
+- All POST/PUT/PATCH/DELETE → `useMutation`
+- Remove manual useEffect/useState data-fetching patterns
+- Consistent query key factories/constants
+- Proper invalidation after mutations (`invalidateQueries` over manual refetch hacks)
+- Sensible `staleTime` by data type
+- Use `placeholderData: keepPreviousData` for UX continuity
+- Handle loading, error, empty, and success states cleanly
+- Standardize any existing partial TanStack Query usage
+- Do not leave old fetching patterns in migrated areas
+
+Query Key Rules:
+- Query keys must be consistent and reusable
+- Prefer typed reusable query-key builders/constants
+- Keep ownership local to feature/entity unless shared centrally
+
+Hook Naming:
+- `useUsersQuery` / `useUserQuery` for queries
+- `useCreateUserMutation` / `useUpdateUserMutation` / `useDeleteUserMutation` for mutations
+
+---
+
+## IMPORT BOUNDARY RULES
+
+Enforce strictly:
+- `app/` → can compose from anywhere (bootstrapping)
+- `pages/` → import from features, entities, shared
+- `features/` → import from entities and shared only
+- `entities/` → import from shared only
+- `shared/` → import from shared only
+
+Rules:
+- No cross-feature deep internal imports
+- Prefer public entrypoints at meaningful boundaries
+- No circular dependencies
+- No barrel-file abuse
+
+---
+
+## SEPARATION OF CONCERNS
+
+- API logic must be separated from hooks
+- Hooks must be separated from UI components
+- Business/domain logic must be separated from presentational components
+- Data shaping, mapping, formatting, validation, query keys, schemas NOT in TSX
+- Page-level files must be mostly compositional
+
+---
+
+## SHARED UI / DESIGN SYSTEM
+
+Unify all reusable UI under `shared/ui/`:
+
+```
+shared/ui/
+├── primitives/    → Button, Input, Textarea, Select, Badge, Spinner, Skeleton, etc.
+└── composites/    → FormField, SearchInput, Modal, DataTable, EmptyState, ErrorState, PageHeader, Pagination, etc.
+```
+
+Rules:
+- Any UI pattern repeated more than once should be extracted if generic
+- No duplicate button/input/modal/table/card/state patterns across features
+- Shared components use controlled variants (variant, size, tone, state)
+- No raw `<button>`, `<input>`, `<select>`, `<textarea>` when shared components exist
+
+---
+
+## STYLING DISCIPLINE
+
+- No random colors — use semantic color system (text-status-*, bg-severity-*, etc.)
+- No random radius/spacing/shadow values — align with shared tokens
+- No `dark:` prefix — CSS variables handle dark mode
+- No `isDark` conditionals — use theme-aware Tailwind classes
+- Reduce arbitrary Tailwind values unless truly necessary
+- Standardize spacing, typography, radius, and state styling
+
+### Forbidden Color Classes
+- `text-red-*` → `text-destructive` or `text-status-error`
+- `text-green-*` → `text-status-success`
+- `text-amber-*` → `text-status-warning`
+- `text-blue-*` (semantic) → `text-status-info`
+- `text-gray-*` → `text-foreground` or `text-muted-foreground`
+- `bg-white` → `bg-card` or `bg-background`
+- `bg-gray-*` → `bg-muted` or `bg-card`
+- `border-gray-*` → `border-border`
+
+### Allowed Exceptions
+- `text-white` on brand/status-colored backgrounds (contrast)
+- `bg-white/5`, `bg-white/10` opacity overlays
+
+---
+
+## MODEL SEPARATION
+
+Separate clearly where beneficial:
+- API DTOs (backend response shapes)
+- Domain/entity models
+- UI/view/form models
+
+Introduce mappers only where they improve maintainability and reduce coupling.
+Do not overengineer trivial pass-through cases.
+
+---
+
+## STATE / LOGIC RULES
+
+- Business logic out of page-level components and presentational TSX
+- Local UI state stays local
+- Reusable stateful logic in hooks
+- Pure computation in lib
+- Validation in schema files
+- API logic in api files
+- Query key ownership explicit
+- Permission logic centralized where possible
+- Tenant-aware logic explicit and not scattered
+
+---
+
+## ERROR HANDLING
+
+- All API errors: `Toast.error(t(getErrorKey(error)))` pattern
+- Import `getErrorKey` from `@/lib/api-error`
+- Backend returns `messageKey` for i18n
+- Standardize error handling patterns — no one-off inconsistent error parsing
+- Extract common error normalization where needed
+
+---
+
+## SEARCH / FILTER / PAGINATION
+
+- All search/filter inputs MUST send requests to backend API (never client-side)
+- Debounce search inputs (400ms)
+- Reset page to 1 on filter change
+- Use `placeholderData: keepPreviousData` in useQuery
+- Pass `isFetching` (not `isLoading`) to DataTable loading prop
+- Query keys must include all filter params
+
+---
+
+## i18n
+
+- Client: `const t = useTranslations('namespace')`
+- Server: `const t = await getTranslations('namespace')`
+- Every new feature MUST include translations in ALL 6 locale files (en, es, fr, it, ar, de)
+- Error keys follow `errors.<module>.<specificAction>` pattern
+- Use `start`/`end` instead of `left`/`right` for RTL support (ps-3, me-2, text-start)
+
+---
+
+## FORMATTING
+
+- No semicolons, single quotes, 2-space indent, 100 char width
+- Trailing comma: es5, arrow parens: avoid, end of line: lf
+- Tailwind classes auto-sorted by prettier plugin
+
+---
+
+## TYPESCRIPT STRICTNESS
+
+- Prefer `type` over `interface` unless there is a real technical reason
+- No `any` — ever
+- All strict flags enabled: strict, noImplicitAny, strictNullChecks, noUncheckedIndexedAccess
+- Keep types explicit, readable, and maintainable
+- Use `import type { Foo }` for type-only imports
+
+---
+
+## EXTRA STRICTNESS
+
+1. **Public API surfaces** — each feature/entity/shared module exposes a deliberate public surface via index.ts
+2. **File size discipline** — split overly large files by responsibility
+3. **Co-location with ownership** — keep files close to the feature/entity they belong to
+4. **Permission/role-aware UI** — centralized and typed, no scattered raw role checks
+5. **Loading/async UX consistency** — standardize spinners, skeletons, empty states, retry states
+6. **Form discipline** — keep submit logic separate from presentational form layout
+7. **Testability** — prefer pure helpers and isolated hooks/services
+8. **Accessibility** — preserve labels, button semantics, keyboard flow, ARIA usage
+9. **Performance** — avoid unnecessary rerenders from unstable inline objects/functions
+10. **Routing discipline** — route files stay thin, no feature internals in page routing layers
+11. **Security** — preserve auth guards, token handling, permission checks, protected routes
+12. **No magic strings** — extract repeated domain values to constants/enums
+
+---
+
+## COMPONENT PATTERNS
+
+- Server Components by default, `'use client'` only when needed
+- Use `PageHeader` from `@/components/common` for page headers
+- Use `Toast` from `@/components/common` for notifications
+- Use `SweetAlertDialog` from `@/components/common` for confirmations
+- Use `Badge` from `@/components/ui/badge` for status indicators
+- Use `DataTable` from `@/components/common/DataTable` for all tables
+
+---
+
+## DO NOT
+
+- Do not break existing behavior
+- Do not invent APIs or backend contracts that do not exist
+- Do not create massive god-files mixing UI + API + hooks + types
+- Do not leave legacy fetching patterns in migrated areas
+- Do not mix competing patterns when one clean standard should exist
+- Do not flatten architecture in a way that mixes concerns
+- Do not weaken TypeScript or linting
+- Do not regress accessibility or auth/security behavior
+- Do not create random wrappers with no value
+- Do not abuse barrel files or create circular dependencies

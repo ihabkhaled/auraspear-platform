@@ -1,0 +1,17 @@
+node_modules
+dist
+.git
+.env
+.env.*
+!.env.example
+*.md
+.husky
+.vscode
+coverage
+test
+.eslintrc*
+eslint.config*
+.prettierrc*
+tsconfig.build.tsbuildinfo
+docker-compose*.yml
+Dockerfile*

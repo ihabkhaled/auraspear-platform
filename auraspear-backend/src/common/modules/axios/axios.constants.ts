@@ -1,0 +1,2 @@
+export const MAX_RESPONSE_BYTES = 10 * 1024 * 1024
+export const DEFAULT_TIMEOUT_MS = 15_000

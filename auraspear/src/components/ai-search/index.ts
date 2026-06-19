@@ -1,0 +1,1 @@
+export { SearchResultsTable } from './SearchResultsTable'

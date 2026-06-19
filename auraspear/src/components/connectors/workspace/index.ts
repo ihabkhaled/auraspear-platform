@@ -1,0 +1,6 @@
+export { WorkspaceSummaryGrid } from './WorkspaceSummaryGrid'
+export { WorkspaceRecentActivity } from './WorkspaceRecentActivity'
+export { WorkspaceEntities } from './WorkspaceEntities'
+export { WorkspaceSearchPanel } from './WorkspaceSearchPanel'
+export { WorkspaceActionsPanel } from './WorkspaceActionsPanel'
+export { WorkspaceHeader } from './WorkspaceHeader'
