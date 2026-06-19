@@ -96,3 +96,76 @@ This is intentionally separate to keep the migration diff reviewable.
 - Per-app Dockerfiles/compose are **stale** post-pnpm (npm + single-app); not yet rewritten — do not rely on `pnpm docker:*` until milestone 2.
 - `docker build`, Trivy, gitleaks were **not run** in this milestone (deferred); no security-scan claims are made.
 - The `zod@4.4.1` store leftover is unlinked and harmless; the web tree resolves to `4.4.3`.
+
+---
+
+## 8. Milestone 2 — Platform hardening (delivered)
+
+Most of §5's deferred items are now done and validated.
+
+### Docker (built + validated)
+
+- Rewrote `apps/web/Dockerfile` and `apps/api/Dockerfile` for the **pnpm
+  workspace** (root build context, Node 22, non-root user, healthchecks). Both
+  images **build successfully**: `auraspear/web:test` (349 MB),
+  `auraspear/api:test` (1.11 GB).
+- Unified compose under `infra/docker/`: `docker-compose.yml` (base) + `dev`/`prod`
+  overlays + `infra`-only + `connectors`; root `docker-compose.yml` via `include`;
+  root `.dockerignore`. `docker compose config` validates for root/dev/prod/infra.
+- Prod hardening confirmed: only web (3000) + api (4000) are published;
+  Postgres/Redis stay internal and Redis runs with `--requirepass`.
+- Build fixes found by real builds: copy `prisma/` before install (postinstall
+  generate), and a build-time dummy `DATABASE_URL` (prisma.config.ts resolves it
+  eagerly; generate never connects).
+- **Known follow-up:** the api image keeps the full workspace (incl. dev deps) so
+  the entrypoint can run `prisma migrate deploy` + `db seed`; prune with
+  `pnpm deploy --prod` (move `prisma` to deps + a ts seed runner) to shrink it.
+
+### CI/CD (`.github/workflows`)
+
+- `ci.yml`: **typecheck + build are hard gates** (both green); `lint` + `format`
+  - `test` run as **advisory** (`continue-on-error`) because of pre-existing lint
+    debt (§4) — honest and non-blocking until cleaned. Node 22, pnpm cache, turbo,
+    Postgres/Redis service containers for the test job.
+- `security.yml` (gitleaks + Trivy fs + pnpm audit), `codeql.yml`,
+  `dependency-review.yml`, `docker.yml` (matrix build + GHCR push on main/tags +
+  Trivy image scan on PRs).
+
+### Scripts
+
+- `scripts/install/`: `install.sh`, `install.ps1`, `doctor.mjs`, `setup-env.mjs`
+  (generates strong secrets, idempotent), `validate-system.mjs`.
+- `scripts/ci/`: `docker-healthcheck.mjs`, `env-audit.mjs`, `dependency-report.mjs`.
+- `pnpm doctor` verified working on this machine.
+
+### `@auraspear/ai` package (typechecks clean)
+
+- Dependency-free building blocks: `safety` (action categories + conservative
+  approval policy), `redaction` (PII/secret scrubbing before model calls),
+  `model-router` (provider cascade logic), `types` (attributable/cited output
+  contracts), `evaluators` (golden-case harness with safety assertions),
+  `prompts` (versioned registry). Plus `docs/AI.md`.
+- Note: this is the **design/scaffold** the brief allows for AI expansion — the
+  live AI subsystem (chat, findings, memory, agents, orchestrator, hunting)
+  already ships in `apps/api/src/modules/ai`.
+
+### Lint — final position
+
+`eslint --fix` applied (web 69→42, api 114→96 problems); **typecheck stays
+green**. Remaining are structural `no-restricted-syntax` (declaration-placement)
+errors + abbreviation warnings — pre-existing debt, not migration regressions.
+CI runs lint **advisory**; getting `lint:strict` to zero is a tracked, isolated
+cleanup so this push doesn't risk-refactor product code.
+
+### Final workspace validation
+
+`pnpm typecheck` → **5/5 packages green**; `pnpm build` → **2/2 apps green**;
+working tree clean.
+
+### Still genuinely deferred
+
+Contract consolidation into `@auraspear/shared` (both apps still own their
+copies); dependency major upgrades + de-dup; `packages/ui` extraction; the
+lint-strict cleanup; wiring the eval gate into CI; api image-size pruning;
+running Trivy/gitleaks/CodeQL for real (workflows are in place but their first
+real run happens in GitHub Actions, not locally).

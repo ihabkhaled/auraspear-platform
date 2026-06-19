@@ -37,7 +37,8 @@ auraspear-platform/
 │   └── api/      @auraspear/api   — NestJS 11, Prisma 7, Postgres, Redis (BFF)
 ├── packages/
 │   ├── shared/   @auraspear/shared — cross-app contracts (scaffolded)
-│   └── config/   @auraspear/config — shared tooling presets (scaffolded)
+│   ├── config/   @auraspear/config — shared tooling presets (scaffolded)
+│   └── ai/       @auraspear/ai     — AI safety/redaction/routing/eval (see docs/AI.md)
 ├── infra/        docker / k8s / terraform
 ├── scripts/      install / ci helpers
 └── docs/         product, architecture, ADRs, audit
