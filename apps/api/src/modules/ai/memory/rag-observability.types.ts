@@ -3,6 +3,12 @@
 
 import type { RetrievedMemory } from './memory.types'
 
+// Raw row returned by the $queryRaw category breakdown query
+export interface RagCategoryRow {
+  category: string
+  count: bigint
+}
+
 export interface RagStats {
   totalRetrievals24h: number
   avgMemoriesPerRetrieval: number

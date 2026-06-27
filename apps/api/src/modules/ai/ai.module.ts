@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common'
 import { AiOpsWorkspaceController } from './ai-ops-workspace.controller'
+import { AiOpsWorkspaceRepository } from './ai-ops-workspace.repository'
 import { AiOpsWorkspaceService } from './ai-ops-workspace.service'
 import { AiController } from './ai.controller'
 import { AiRepository } from './ai.repository'
@@ -39,7 +40,7 @@ import { OsintExecutorModule } from '../osint-executor/osint-executor.module'
     SemanticSearchModule,
   ],
   controllers: [AiController, AiOpsWorkspaceController],
-  providers: [AiRepository, AiService, AiOpsWorkspaceService],
+  providers: [AiRepository, AiService, AiOpsWorkspaceRepository, AiOpsWorkspaceService],
   exports: [
     AiService,
     AiOpsWorkspaceService,

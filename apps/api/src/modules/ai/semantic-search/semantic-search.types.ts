@@ -10,3 +10,44 @@ export interface SearchResult {
   score: number
   createdAt: Date | string
 }
+
+// Raw row shapes returned by each repository search method
+export interface FindingSearchRow {
+  id: string
+  title: string | null
+  summary: string | null
+  createdAt: Date
+}
+
+export interface ChatThreadSearchRow {
+  id: string
+  title: string | null
+  createdAt: Date
+}
+
+export interface MemorySearchRow {
+  id: string
+  content: string
+  createdAt: Date
+}
+
+export interface AlertSearchRow {
+  id: string
+  title: string
+  description: string | null
+  createdAt: Date
+}
+
+export interface CaseSearchRow {
+  id: string
+  title: string
+  description: string | null
+  createdAt: Date
+}
+
+export interface IncidentSearchRow {
+  id: string
+  title: string
+  description: string | null
+  createdAt: Date
+}

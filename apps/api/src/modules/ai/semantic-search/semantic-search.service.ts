@@ -1,14 +1,23 @@
 import { Injectable, Logger } from '@nestjs/common'
-import { PrismaService } from '../../../prisma/prisma.service'
+import { ALL_SEARCH_MODULES } from './semantic-search.constants'
+import { SemanticSearchRepository } from './semantic-search.repository'
+import {
+  mapAlertsToResults,
+  mapCasesToResults,
+  mapChatThreadsToResults,
+  mapFindingsToResults,
+  mapIncidentsToResults,
+  mapMemoriesToResults,
+} from './semantic-search.utilities'
 import type { SearchResult } from './semantic-search.types'
 
 @Injectable()
 export class SemanticSearchService {
   private readonly logger = new Logger(SemanticSearchService.name)
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly semanticSearchRepository: SemanticSearchRepository) {}
 
-  getSearchableModules() {
+  getSearchableModules(): Array<{ key: string; label: string }> {
     return [
       { key: 'findings', label: 'AI Findings' },
       { key: 'chatThreads', label: 'Chat Threads' },
@@ -25,194 +34,62 @@ export class SemanticSearchService {
     modules?: string[],
     limit = 25
   ): Promise<SearchResult[]> {
-    const results: SearchResult[] = []
     const perModule = Math.max(5, Math.ceil(limit / 6))
+    const searchModules = modules && modules.length > 0 ? modules : ALL_SEARCH_MODULES
+    const searches = this.buildSearchPromises(tenantId, query, perModule, searchModules)
+    const resultGroups = await Promise.all(searches)
+    const results = resultGroups.flat()
+    results.sort((a, b) => b.score - a.score)
+    return results.slice(0, limit)
+  }
 
-    const searchModules =
-      modules && modules.length > 0
-        ? modules
-        : ['findings', 'chatThreads', 'memories', 'alerts', 'cases', 'incidents']
-
-    const searches: Promise<void>[] = []
-
+  private buildSearchPromises(
+    tenantId: string,
+    query: string,
+    perModule: number,
+    searchModules: string[]
+  ): Array<Promise<SearchResult[]>> {
+    const searches: Array<Promise<SearchResult[]>> = []
     if (searchModules.includes('findings')) {
       searches.push(
-        this.prisma.aiExecutionFinding
-          .findMany({
-            where: {
-              tenantId,
-              OR: [
-                { title: { contains: query, mode: 'insensitive' } },
-                { summary: { contains: query, mode: 'insensitive' } },
-              ],
-            },
-            take: perModule,
-            orderBy: { createdAt: 'desc' },
-          })
-          .then(rows => {
-            for (const r of rows) {
-              results.push({
-                id: r.id,
-                module: 'findings',
-                entityType: 'AiExecutionFinding',
-                title: r.title ?? 'Untitled Finding',
-                snippet: (r.summary ?? '').slice(0, 200),
-                score: 1,
-                createdAt: r.createdAt,
-              })
-            }
-          })
+        this.semanticSearchRepository
+          .findFindings(tenantId, query, perModule)
+          .then(mapFindingsToResults)
       )
     }
-
     if (searchModules.includes('chatThreads')) {
       searches.push(
-        this.prisma.aiChatThread
-          .findMany({
-            where: {
-              tenantId,
-              title: { contains: query, mode: 'insensitive' },
-            },
-            take: perModule,
-            orderBy: { updatedAt: 'desc' },
-          })
-          .then(rows => {
-            for (const r of rows) {
-              results.push({
-                id: r.id,
-                module: 'chatThreads',
-                entityType: 'AiChatThread',
-                title: r.title ?? 'Untitled Thread',
-                snippet: '',
-                score: 0.9,
-                createdAt: r.createdAt,
-              })
-            }
-          })
+        this.semanticSearchRepository
+          .findChatThreads(tenantId, query, perModule)
+          .then(mapChatThreadsToResults)
       )
     }
-
     if (searchModules.includes('memories')) {
       searches.push(
-        this.prisma.userMemory
-          .findMany({
-            where: {
-              tenantId,
-              content: { contains: query, mode: 'insensitive' },
-            },
-            take: perModule,
-            orderBy: { createdAt: 'desc' },
-          })
-          .then(rows => {
-            for (const r of rows) {
-              results.push({
-                id: r.id,
-                module: 'memories',
-                entityType: 'UserMemory',
-                title: r.content.slice(0, 80),
-                snippet: r.content.slice(0, 200),
-                score: 0.85,
-                createdAt: r.createdAt,
-              })
-            }
-          })
+        this.semanticSearchRepository
+          .findMemories(tenantId, query, perModule)
+          .then(mapMemoriesToResults)
       )
     }
-
     if (searchModules.includes('alerts')) {
       searches.push(
-        this.prisma.alert
-          .findMany({
-            where: {
-              tenantId,
-              OR: [
-                { title: { contains: query, mode: 'insensitive' } },
-                { description: { contains: query, mode: 'insensitive' } },
-              ],
-            },
-            take: perModule,
-            orderBy: { createdAt: 'desc' },
-          })
-          .then(rows => {
-            for (const r of rows) {
-              results.push({
-                id: r.id,
-                module: 'alerts',
-                entityType: 'Alert',
-                title: r.title,
-                snippet: (r.description ?? '').slice(0, 200),
-                score: 0.8,
-                createdAt: r.createdAt,
-              })
-            }
-          })
+        this.semanticSearchRepository
+          .findAlerts(tenantId, query, perModule)
+          .then(mapAlertsToResults)
       )
     }
-
     if (searchModules.includes('cases')) {
       searches.push(
-        this.prisma.case
-          .findMany({
-            where: {
-              tenantId,
-              OR: [
-                { title: { contains: query, mode: 'insensitive' } },
-                { description: { contains: query, mode: 'insensitive' } },
-              ],
-            },
-            take: perModule,
-            orderBy: { createdAt: 'desc' },
-          })
-          .then(rows => {
-            for (const r of rows) {
-              results.push({
-                id: r.id,
-                module: 'cases',
-                entityType: 'Case',
-                title: r.title,
-                snippet: (r.description ?? '').slice(0, 200),
-                score: 0.8,
-                createdAt: r.createdAt,
-              })
-            }
-          })
+        this.semanticSearchRepository.findCases(tenantId, query, perModule).then(mapCasesToResults)
       )
     }
-
     if (searchModules.includes('incidents')) {
       searches.push(
-        this.prisma.incident
-          .findMany({
-            where: {
-              tenantId,
-              OR: [
-                { title: { contains: query, mode: 'insensitive' } },
-                { description: { contains: query, mode: 'insensitive' } },
-              ],
-            },
-            take: perModule,
-            orderBy: { createdAt: 'desc' },
-          })
-          .then(rows => {
-            for (const r of rows) {
-              results.push({
-                id: r.id,
-                module: 'incidents',
-                entityType: 'Incident',
-                title: r.title,
-                snippet: (r.description ?? '').slice(0, 200),
-                score: 0.8,
-                createdAt: r.createdAt,
-              })
-            }
-          })
+        this.semanticSearchRepository
+          .findIncidents(tenantId, query, perModule)
+          .then(mapIncidentsToResults)
       )
     }
-
-    await Promise.all(searches)
-
-    results.sort((a, b) => b.score - a.score)
-
-    return results.slice(0, limit)
+    return searches
   }
 }

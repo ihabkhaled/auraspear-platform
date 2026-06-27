@@ -1,34 +1,35 @@
 import { AiOpsWorkspaceService } from '../../src/modules/ai/ai-ops-workspace.service'
+import type { AiOpsWorkspaceRepository } from '../../src/modules/ai/ai-ops-workspace.repository'
 
-function createMockPrisma() {
+function createMockRepository(): jest.Mocked<AiOpsWorkspaceRepository> {
   return {
-    $queryRaw: jest.fn(),
-    aiAgentSession: { count: jest.fn() },
-    aiApprovalRequest: { count: jest.fn() },
-    aiExecutionFinding: { findMany: jest.fn() },
-    aiJobRunSummary: { findMany: jest.fn() },
-  }
+    fetchWorkspaceData: jest.fn(),
+  } as unknown as jest.Mocked<AiOpsWorkspaceRepository>
 }
 
 describe('AiOpsWorkspaceService', () => {
   let service: AiOpsWorkspaceService
-  let prisma: ReturnType<typeof createMockPrisma>
+  let repository: jest.Mocked<AiOpsWorkspaceRepository>
 
   const TENANT_ID = 'tenant-001'
 
   beforeEach(() => {
     jest.clearAllMocks()
-    prisma = createMockPrisma()
-    service = new AiOpsWorkspaceService(prisma as never)
+    repository = createMockRepository()
+    service = new AiOpsWorkspaceService(repository)
   })
 
   describe('getWorkspace', () => {
     it('should return aggregated workspace with all sections', async () => {
-      // Agent stats
-      prisma.$queryRaw
-        .mockResolvedValueOnce([{ total: BigInt(10), online: BigInt(3) }]) // agents
-        .mockResolvedValueOnce([{ total: BigInt(50), success: BigInt(45), failure: BigInt(5) }]) // job runs
-        .mockResolvedValueOnce([
+      const findingCreatedAt = new Date()
+      const jobCreatedAt = new Date()
+
+      repository.fetchWorkspaceData.mockResolvedValue({
+        agentStats: [{ total: BigInt(10), online: BigInt(3) }],
+        sessions24h: 25,
+        jobRuns24h: [{ total: BigInt(50), success: BigInt(45), failure: BigInt(5) }],
+        approvalsPending: 3,
+        findingsStats: [
           {
             total: BigInt(120),
             proposed: BigInt(30),
@@ -36,41 +37,38 @@ describe('AiOpsWorkspaceService', () => {
             dismissed: BigInt(25),
             high_confidence: BigInt(80),
           },
-        ]) // findings
-        .mockResolvedValueOnce([
+        ],
+        chatStats: [
           { total_threads: BigInt(15), total_messages: BigInt(200), legal_hold: BigInt(2) },
-        ]) // chat
-        .mockResolvedValueOnce([
-          { total_tokens: BigInt(500000), estimated_cost: 15.5, requests: BigInt(100) },
-        ]) // usage
-        .mockResolvedValueOnce([{ total: BigInt(300), actors: BigInt(8) }]) // audit
-
-      prisma.aiAgentSession.count.mockResolvedValue(25)
-      prisma.aiApprovalRequest.count.mockResolvedValue(3)
-      prisma.aiExecutionFinding.findMany.mockResolvedValue([
-        {
-          id: 'f1',
-          findingType: 'triage',
-          title: 'Alert finding',
-          status: 'proposed',
-          agentId: 'agent-1',
-          sourceModule: 'alerts',
-          createdAt: new Date(),
-        },
-      ])
-      prisma.aiJobRunSummary.findMany.mockResolvedValue([
-        {
-          id: 'j1',
-          jobKey: 'detection.rule_draft',
-          status: 'completed',
-          agentId: 'agent-2',
-          sourceModule: 'detection',
-          createdAt: new Date(),
-        },
-      ])
+        ],
+        usageStats: [{ total_tokens: BigInt(500000), estimated_cost: 15.5, requests: BigInt(100) }],
+        auditStats: [{ total: BigInt(300), actors: BigInt(8) }],
+        recentFindings: [
+          {
+            id: 'f1',
+            findingType: 'triage',
+            title: 'Alert finding',
+            status: 'proposed',
+            agentId: 'agent-1',
+            sourceModule: 'alerts',
+            createdAt: findingCreatedAt,
+          },
+        ],
+        recentJobs: [
+          {
+            id: 'j1',
+            jobKey: 'detection.rule_draft',
+            status: 'completed',
+            agentId: 'agent-2',
+            sourceModule: 'detection',
+            createdAt: jobCreatedAt,
+          },
+        ],
+      })
 
       const result = await service.getWorkspace(TENANT_ID)
 
+      expect(repository.fetchWorkspaceData).toHaveBeenCalledWith(TENANT_ID, expect.any(Date))
       expect(result.agents.total).toBe(10)
       expect(result.agents.online).toBe(3)
       expect(result.agents.totalSessions24h).toBe(25)
@@ -95,18 +93,18 @@ describe('AiOpsWorkspaceService', () => {
     })
 
     it('should handle empty data gracefully', async () => {
-      prisma.$queryRaw
-        .mockResolvedValueOnce([]) // agents empty
-        .mockResolvedValueOnce([]) // job runs empty
-        .mockResolvedValueOnce([]) // findings empty
-        .mockResolvedValueOnce([]) // chat empty
-        .mockResolvedValueOnce([]) // usage empty
-        .mockResolvedValueOnce([]) // audit empty
-
-      prisma.aiAgentSession.count.mockResolvedValue(0)
-      prisma.aiApprovalRequest.count.mockResolvedValue(0)
-      prisma.aiExecutionFinding.findMany.mockResolvedValue([])
-      prisma.aiJobRunSummary.findMany.mockResolvedValue([])
+      repository.fetchWorkspaceData.mockResolvedValue({
+        agentStats: [],
+        sessions24h: 0,
+        jobRuns24h: [],
+        approvalsPending: 0,
+        findingsStats: [],
+        chatStats: [],
+        usageStats: [],
+        auditStats: [],
+        recentFindings: [],
+        recentJobs: [],
+      })
 
       const result = await service.getWorkspace(TENANT_ID)
 
@@ -121,30 +119,6 @@ describe('AiOpsWorkspaceService', () => {
     })
 
     it('should sort recent activity by createdAt descending and limit to 15', async () => {
-      prisma.$queryRaw
-        .mockResolvedValueOnce([{ total: BigInt(0), online: BigInt(0) }])
-        .mockResolvedValueOnce([{ total: BigInt(0), success: BigInt(0), failure: BigInt(0) }])
-        .mockResolvedValueOnce([
-          {
-            total: BigInt(0),
-            proposed: BigInt(0),
-            applied: BigInt(0),
-            dismissed: BigInt(0),
-            high_confidence: BigInt(0),
-          },
-        ])
-        .mockResolvedValueOnce([
-          { total_threads: BigInt(0), total_messages: BigInt(0), legal_hold: BigInt(0) },
-        ])
-        .mockResolvedValueOnce([
-          { total_tokens: BigInt(0), estimated_cost: 0, requests: BigInt(0) },
-        ])
-        .mockResolvedValueOnce([{ total: BigInt(0), actors: BigInt(0) }])
-
-      prisma.aiAgentSession.count.mockResolvedValue(0)
-      prisma.aiApprovalRequest.count.mockResolvedValue(0)
-
-      // 10 findings + 10 jobs = 20 total, should be limited to 15
       const findings = Array.from({ length: 10 }, (_, index) => ({
         id: `f${String(index)}`,
         findingType: 'triage',
@@ -163,8 +137,26 @@ describe('AiOpsWorkspaceService', () => {
         createdAt: new Date(Date.now() - (index + 5) * 60000),
       }))
 
-      prisma.aiExecutionFinding.findMany.mockResolvedValue(findings)
-      prisma.aiJobRunSummary.findMany.mockResolvedValue(jobs)
+      repository.fetchWorkspaceData.mockResolvedValue({
+        agentStats: [{ total: BigInt(0), online: BigInt(0) }],
+        sessions24h: 0,
+        jobRuns24h: [{ total: BigInt(0), success: BigInt(0), failure: BigInt(0) }],
+        approvalsPending: 0,
+        findingsStats: [
+          {
+            total: BigInt(0),
+            proposed: BigInt(0),
+            applied: BigInt(0),
+            dismissed: BigInt(0),
+            high_confidence: BigInt(0),
+          },
+        ],
+        chatStats: [{ total_threads: BigInt(0), total_messages: BigInt(0), legal_hold: BigInt(0) }],
+        usageStats: [{ total_tokens: BigInt(0), estimated_cost: 0, requests: BigInt(0) }],
+        auditStats: [{ total: BigInt(0), actors: BigInt(0) }],
+        recentFindings: findings,
+        recentJobs: jobs,
+      })
 
       const result = await service.getWorkspace(TENANT_ID)
 

@@ -1,8 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common'
 import { EmbeddingService } from './embedding.service'
 import { MemoryRetrievalService } from './memory-retrieval.service'
-import { getUserMemoryDelegate } from './memory.types'
-import { PrismaService } from '../../../prisma/prisma.service'
+import { RagObservabilityRepository } from './rag-observability.repository'
 import type { RagStats, RagTraceResult } from './rag-observability.types'
 
 @Injectable()
@@ -10,7 +9,7 @@ export class RagObservabilityService {
   private readonly logger = new Logger(RagObservabilityService.name)
 
   constructor(
-    private readonly prisma: PrismaService,
+    private readonly ragObservabilityRepository: RagObservabilityRepository,
     private readonly embeddingService: EmbeddingService,
     private readonly memoryRetrievalService: MemoryRetrievalService
   ) {}
@@ -19,11 +18,7 @@ export class RagObservabilityService {
     const startMs = Date.now()
     const memories = await this.memoryRetrievalService.retrieveRelevant(tenantId, userId, query)
     const durationMs = Date.now() - startMs
-
-    const delegate = getUserMemoryDelegate(this.prisma)
-    const totalCount = await delegate.count({
-      where: { tenantId, userId, isDeleted: false },
-    })
+    const totalCount = await this.ragObservabilityRepository.countActiveMemories(tenantId, userId)
 
     this.logger.log(
       `RAG trace for user ${userId}: retrieved ${String(memories.length)}/${String(totalCount)} memories in ${String(durationMs)}ms`
@@ -41,17 +36,9 @@ export class RagObservabilityService {
   }
 
   async getStats(tenantId: string): Promise<RagStats> {
-    const delegate = getUserMemoryDelegate(this.prisma)
-
-    const totalMemories = await delegate.count({
-      where: { tenantId, isDeleted: false },
-    })
-
-    const categories = await this.prisma.$queryRaw<Array<{ category: string; count: bigint }>>`
-      SELECT category, COUNT(*) as count
-      FROM user_memories WHERE tenant_id = ${tenantId}::uuid AND is_deleted = false
-      GROUP BY category ORDER BY count DESC
-    `
+    const totalMemories =
+      await this.ragObservabilityRepository.countAllActiveMemoriesByTenant(tenantId)
+    const categories = await this.ragObservabilityRepository.fetchCategoryBreakdown(tenantId)
 
     return {
       totalRetrievals24h: 0,
