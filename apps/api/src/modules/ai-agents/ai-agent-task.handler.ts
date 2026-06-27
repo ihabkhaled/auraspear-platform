@@ -1,6 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common'
 import { AiAgentsRepository } from './ai-agents.repository'
+import { ApprovalStatus } from '../../common/enums'
 import { nowMs, elapsedMs } from '../../common/utils/date-time.utility'
+import { AgentConfigRepository } from '../agent-config/agent-config.repository'
 import { AI_COST_PER_1K_INPUT_TOKENS, AI_COST_PER_1K_OUTPUT_TOKENS } from '../ai/ai.constants'
 import { AiService } from '../ai/ai.service'
 import { AiWritebackService } from '../ai/writeback/ai-writeback.service'
@@ -15,7 +17,8 @@ export class AiAgentTaskHandler {
   constructor(
     private readonly repository: AiAgentsRepository,
     private readonly aiService: AiService,
-    private readonly writebackService: AiWritebackService
+    private readonly writebackService: AiWritebackService,
+    private readonly agentConfigRepository: AgentConfigRepository
   ) {}
 
   async handle(job: Job): Promise<Record<string, unknown>> {
@@ -26,6 +29,16 @@ export class AiAgentTaskHandler {
       throw new Error('agentId is required in job payload')
     }
 
+    // SEC-02: gate on approval status BEFORE doing any AI work.
+    // Only actions that were flagged requiresApproval need this check;
+    // analysis-only / auto-allowed actions proceed immediately.
+    if (payload.requiresApproval === true) {
+      const approvalGranted = await this.checkApprovalStatus(job.tenantId, payload)
+      if (!approvalGranted) {
+        return { skipped: true, reason: 'approval_not_granted', agentId }
+      }
+    }
+
     // System-triggered jobs use slug IDs (e.g. 'alert-triage') from TenantAgentConfig
     // User-triggered jobs use UUID IDs from AiAgent table
     if (payload.triggeredBy) {
@@ -33,6 +46,43 @@ export class AiAgentTaskHandler {
     }
 
     return this.handleUserTriggered(job, payload)
+  }
+
+  /**
+   * SEC-02: look up the AiApprovalRequest for this job and return true only
+   * when status is APPROVED.  Any other status (PENDING, REJECTED, EXPIRED,
+   * missing record) is treated as not-approved — fail safe.
+   */
+  private async checkApprovalStatus(tenantId: string, payload: AgentTaskPayload): Promise<boolean> {
+    const { jobId } = payload
+
+    if (!jobId) {
+      this.logger.warn(
+        `[SEC-02] requiresApproval=true but no jobId in payload for agent ${payload.agentId ?? 'unknown'} — skipping execution (fail safe)`
+      )
+      return false
+    }
+
+    const approval = await this.agentConfigRepository.findApprovalByJobId(tenantId, jobId)
+
+    if (!approval) {
+      this.logger.warn(
+        `[SEC-02] No AiApprovalRequest found for jobId=${jobId} agent=${payload.agentId ?? 'unknown'} tenant=${tenantId} — skipping execution`
+      )
+      return false
+    }
+
+    if (approval.status === ApprovalStatus.APPROVED) {
+      this.logger.log(
+        `[SEC-02] Approval granted for jobId=${jobId} agent=${payload.agentId ?? 'unknown'} tenant=${tenantId}`
+      )
+      return true
+    }
+
+    this.logger.warn(
+      `[SEC-02] Approval not granted (status=${approval.status}) for jobId=${jobId} agent=${payload.agentId ?? 'unknown'} tenant=${tenantId} — skipping execution`
+    )
+    return false
   }
 
   private async handleUserTriggered(

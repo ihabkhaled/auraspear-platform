@@ -3,6 +3,7 @@ import { AiAgentTaskHandler } from './ai-agent-task.handler'
 import { AiAgentsController } from './ai-agents.controller'
 import { AiAgentsRepository } from './ai-agents.repository'
 import { AiAgentsService } from './ai-agents.service'
+import { AgentConfigModule } from '../agent-config/agent-config.module'
 import { AiModule } from '../ai/ai.module'
 import { AiWritebackModule } from '../ai/writeback/ai-writeback.module'
 import { AppLogsModule } from '../app-logs/app-logs.module'
@@ -11,6 +12,7 @@ import { JobsModule } from '../jobs/jobs.module'
 @Module({
   imports: [
     AppLogsModule,
+    AgentConfigModule,
     forwardRef(() => AiModule),
     forwardRef(() => JobsModule),
     AiWritebackModule,

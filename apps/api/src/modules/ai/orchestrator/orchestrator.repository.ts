@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common'
 import { PrismaService } from '../../../prisma/prisma.service'
-import type { Job, Prisma } from '@prisma/client'
+import type { AiApprovalRequest, Job, Prisma } from '@prisma/client'
 
 @Injectable()
 export class OrchestratorRepository {
@@ -72,5 +72,18 @@ export class OrchestratorRepository {
       where.status = status as Prisma.EnumJobStatusFilter
     }
     return this.prisma.job.count({ where })
+  }
+
+  /**
+   * Find the AiApprovalRequest whose actionData.jobId matches the given jobId.
+   * Used by the job handler to gate execution on approval status.
+   */
+  async findApprovalByJobId(tenantId: string, jobId: string): Promise<AiApprovalRequest | null> {
+    return this.prisma.aiApprovalRequest.findFirst({
+      where: {
+        tenantId,
+        actionData: { path: ['jobId'], equals: jobId },
+      },
+    })
   }
 }

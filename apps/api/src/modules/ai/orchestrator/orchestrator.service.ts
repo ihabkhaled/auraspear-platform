@@ -9,6 +9,7 @@ import {
   AppLogFeature,
   AppLogOutcome,
   AppLogSourceType,
+  ApprovalRiskLevel,
 } from '../../../common/enums'
 import { BusinessException } from '../../../common/exceptions/business.exception'
 import { buildPaginationMeta } from '../../../common/interfaces/pagination.interface'
@@ -72,12 +73,20 @@ export class OrchestratorService {
     }
 
     const resolved = this.resolveAutomationMode(agentConfig, actionType)
-    const job = await this.enqueueAgentJob(input, resolved)
 
-    // Create approval record when approval is required
+    // SEC-02: pre-allocate the jobId so the approval record and the enqueued
+    // job share the same identifier. The handler uses this id to look up
+    // approval status before executing the AI task.
+    const pendingJobId = randomUUID()
+    const enrichedInput: DispatchAgentTaskInput = { ...input, pendingJobId }
+
+    // SEC-02: when approval is required, persist the record BEFORE enqueuing.
+    // If the record cannot be created, we must NOT enqueue — fail safe.
     if (resolved.requiresApproval) {
-      await this.createApprovalRecord(input, job.id, agentConfig)
+      await this.createApprovalRecordOrThrow(enrichedInput, resolved)
     }
+
+    const job = await this.enqueueAgentJob(enrichedInput, resolved)
 
     this.logDispatchSuccess(input, job.id, resolved)
 
@@ -89,34 +98,40 @@ export class OrchestratorService {
     }
   }
 
-  private async createApprovalRecord(
+  /**
+   * Create the AiApprovalRequest record BEFORE the job is enqueued.
+   *
+   * SEC-02 fix: we need the jobId in actionData so the handler can look up the
+   * approval. Because the job does not exist yet we use a pre-allocated jobId
+   * (UUID) that is then passed into `enqueueAgentJob` so both sides share the
+   * same identifier.  The method throws on failure — callers must NOT proceed
+   * to enqueue when this throws.
+   */
+  private async createApprovalRecordOrThrow(
     input: DispatchAgentTaskInput,
-    jobId: string,
-    _agentConfig: AgentConfigWithDefaults
+    resolved: ResolvedAutomationMode
   ): Promise<void> {
-    try {
-      const expiresAt = new Date()
-      expiresAt.setHours(expiresAt.getHours() + 24)
+    const expiresAt = new Date()
+    expiresAt.setHours(expiresAt.getHours() + 24)
 
-      await this.agentConfigService.createApproval({
-        tenantId: input.tenantId,
-        agentId: input.agentId,
-        actionType: input.actionType,
-        actionData: {
-          jobId,
-          payload: input.payload ?? {},
-          triggeredBy: input.triggeredBy,
-        },
-        riskLevel: 'medium',
-        requestedBy: input.triggeredBy,
-        expiresAt,
-      })
+    await this.agentConfigService.createApproval({
+      tenantId: input.tenantId,
+      agentId: input.agentId,
+      actionType: input.actionType,
+      actionData: {
+        jobId: input.pendingJobId ?? '',
+        payload: input.payload ?? {},
+        triggeredBy: input.triggeredBy,
+        automationMode: resolved.mode,
+      },
+      riskLevel: ApprovalRiskLevel.MEDIUM,
+      requestedBy: input.triggeredBy,
+      expiresAt,
+    })
 
-      this.logger.log(`Approval record created for agent ${input.agentId} (job ${jobId})`)
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown error'
-      this.logger.warn(`Failed to create approval record: ${message}`)
-    }
+    this.logger.log(
+      `Approval record created for agent ${input.agentId} (pending job ${input.pendingJobId ?? 'unknown'})`
+    )
   }
 
   /* ---------------------------------------------------------------- */
@@ -291,21 +306,24 @@ export class OrchestratorService {
     input: DispatchAgentTaskInput,
     resolved: ResolvedAutomationMode
   ): Promise<{ id: string }> {
-    const { tenantId, agentId, actionType, payload, triggeredBy, connector } = input
+    const { tenantId, agentId, actionType, payload, triggeredBy, connector, pendingJobId } = input
     return this.jobService.enqueue({
       tenantId,
       type: JobType.AI_AGENT_TASK,
+      // SEC-02: pass requiresApproval + pendingJobId so the handler can gate
+      // on the persisted AiApprovalRequest record.
       payload: {
         agentId,
         actionType,
         triggeredBy,
         automationMode: resolved.mode,
         requiresApproval: resolved.requiresApproval,
+        jobId: pendingJobId,
         connector,
         ...payload,
       },
       maxAttempts: 2,
-      idempotencyKey: `orchestrator:${agentId}:${actionType}:${randomUUID()}`,
+      idempotencyKey: `orchestrator:${agentId}:${actionType}:${pendingJobId ?? randomUUID()}`,
       createdBy: triggeredBy,
     })
   }

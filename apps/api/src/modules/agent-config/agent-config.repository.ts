@@ -168,6 +168,22 @@ export class AgentConfigRepository {
     })
   }
 
+  /**
+   * Find an AiApprovalRequest by the jobId stored in its actionData JSON field.
+   * Used by the AI_AGENT_TASK job handler to gate execution on approval status.
+   */
+  async findApprovalByJobId(
+    tenantId: string,
+    jobId: string
+  ): Promise<AiApprovalRequestRecord | null> {
+    return this.prisma.aiApprovalRequest.findFirst({
+      where: {
+        tenantId,
+        actionData: { path: ['jobId'], equals: jobId },
+      },
+    })
+  }
+
   async createApproval(
     data: Prisma.AiApprovalRequestCreateInput
   ): Promise<AiApprovalRequestRecord> {

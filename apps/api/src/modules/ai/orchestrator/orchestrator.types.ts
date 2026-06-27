@@ -7,6 +7,12 @@ export interface DispatchAgentTaskInput {
   payload: Record<string, unknown>
   triggeredBy: string
   connector?: string
+  /**
+   * Pre-allocated UUID shared between the AiApprovalRequest actionData.jobId
+   * and the AI_AGENT_TASK job payload.jobId. Populated internally by
+   * OrchestratorService.dispatchAgentTask; callers must not set this.
+   */
+  pendingJobId?: string
 }
 
 export interface DispatchAgentTaskResult {
