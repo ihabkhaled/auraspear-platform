@@ -21,6 +21,12 @@ loading order: `AGENTS.md` → `memory/` → `context/` → `rules/` → `skills
 DECISIONS/COMMANDS_MEMORY.md`). Do not put task notes here.
 - **`context/`** — per-area onboarding (`context/*_CONTEXT.md`): where files
   live, which rules/skills/docs apply, common mistakes, validation commands.
+- **`docs/audit/`** — the §16.1 audit set (`README.md` maps it): architecture/
+  clean-code, ESLint hardening, testing/coverage, security/performance, and
+  AI-docs/rules audits with the prioritized remediation roadmap. Before
+  refactoring read `rules/global/refactor-workflow.md` and the matching
+  remediation skill (`split-god-service`, `split-large-react-component`,
+  `harden-eslint`, `perform-security-review`, `perform-performance-review`).
 
 ## Patch discipline
 

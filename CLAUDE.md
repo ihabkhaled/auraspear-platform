@@ -58,6 +58,13 @@ pnpm test               # advisory
 Hard gates must be green. Advisory failures must be reported, not hidden.
 `tsc` is the trusted typecheck; `tsgo` (`pnpm typecheck:fast`) is advisory only.
 
+> **Staged ESLint:** the apps carry warn-only size/complexity budgets
+> (`max-lines`, `max-depth`, `max-params`, `complexity`) that surface god files
+> without failing the advisory lint gate — do not silence them; split the file
+> (`rules/global/refactor-workflow.md`). `packages/ai`/`packages/shared` now lint
+> type-aware and **must stay at zero warnings** (`lint:strict`). Current debt and
+> the remediation roadmap live in the §16.1 audit set (`docs/audit/README.md`).
+
 ## Harness / environment notes
 
 - Windows host; primary shell is PowerShell, but a Bash tool is available — use

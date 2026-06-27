@@ -141,24 +141,36 @@ coordinates and demands evidence.
 
 ## 11. How to do common things safely (recipes)
 
-| Task                          | Skill                                                             |
-| ----------------------------- | ----------------------------------------------------------------- |
-| Add a frontend page           | `skills/frontend/add-page.md`                                     |
-| Add an API endpoint           | `skills/backend/add-endpoint.md`                                  |
-| Add a permission (end-to-end) | `skills/backend/add-permission.md`                                |
-| Add a Prisma model            | `skills/backend/add-prisma-model.md`                              |
-| Add an env variable           | `skills/devsecops/add-env-variable.md`                            |
-| Add an AI feature/panel       | `skills/ai/add-ai-feature.md` + `skills/frontend/add-ai-panel.md` |
-| Run a security scan           | `skills/devsecops/run-security-scan.md`                           |
-| Upgrade a dependency          | `skills/devsecops/upgrade-dependency.md`                          |
-| Validate a release            | `skills/qa/validate-release.md`                                   |
+| Task                          | Skill                                                                           |
+| ----------------------------- | ------------------------------------------------------------------------------- |
+| Add a frontend page           | `skills/frontend/add-page.md`                                                   |
+| Add an API endpoint           | `skills/backend/add-endpoint.md`                                                |
+| Add a permission (end-to-end) | `skills/backend/add-permission.md`                                              |
+| Add a Prisma model            | `skills/backend/add-prisma-model.md`                                            |
+| Add an env variable           | `skills/devsecops/add-env-variable.md`                                          |
+| Add an AI feature/panel       | `skills/ai/add-ai-feature.md` + `skills/frontend/add-ai-panel.md`               |
+| Run a security scan           | `skills/devsecops/run-security-scan.md`                                         |
+| Upgrade a dependency          | `skills/devsecops/upgrade-dependency.md`                                        |
+| Validate a release            | `skills/qa/validate-release.md`                                                 |
+| Split a god service           | `skills/backend/split-god-service.md`                                           |
+| Split a large React component | `skills/frontend/split-large-react-component.md`                                |
+| Fix FE performance / a11y     | `skills/frontend/fix-frontend-performance.md` · `fix-frontend-accessibility.md` |
+| Harden ESLint (staged)        | `skills/devsecops/harden-eslint.md`                                             |
+| Security / performance review | `skills/qa/perform-security-review.md` · `perform-performance-review.md`        |
+| Investigate a production bug  | `skills/qa/investigate-production-bug.md`                                       |
+
+> **Refactor safely:** before any refactor read `rules/global/refactor-workflow.md`
+> (characterization tests first, preserve contracts/tenancy/RBAC/AI-safety, run
+> the gates). The §16.1 audit set in `docs/audit/` (+ `docs/audit/README.md`)
+> records the current debt and the prioritized remediation roadmap.
 
 ## 12. Docs map
 
 Central index: **`docs/DOCS_INDEX.md`**. Highlights: `docs/PRODUCT.md`,
 `docs/ARCHITECTURE.md` (+ `docs/architecture/`), `docs/AI.md` (+ `docs/ai/`),
-`docs/SECURITY.md` (+ `docs/security/`), `docs/ENVIRONMENT.md`, `docs/INSTALL.md`,
-`docs/tools/`, `docs/business/`, `docs/audit/`, `docs/decisions/` (ADRs).
+`docs/SECURITY.md` (+ `docs/security/`), `docs/ENVIRONMENT.md`, `INSTALL.md` (repo root),
+`docs/tools/`, `docs/business/`, `docs/audit/` (incl. the §16.1 audit set + `docs/audit/README.md`),
+`docs/decisions/` (ADRs).
 
 ## 13. Final response format (for agents finishing a task)
 

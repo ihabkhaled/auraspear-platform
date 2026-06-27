@@ -62,6 +62,12 @@ new contributors: start at [`AGENTS.md`](../AGENTS.md).**
 ## Decisions & audit
 
 - [decisions/](decisions/) — ADR-0001..0005
-- [audit/](audit/) — `CURRENT_PROGRESS_AUDIT`, `FINAL_REPORT`,
-  `FINAL_AGENT_ONBOARDING_REPORT`, inventory/file-map/risk-register,
+- [audit/](audit/) — [index/map](audit/README.md); `CURRENT_PROGRESS_AUDIT`,
+  `FINAL_REPORT`, `FINAL_AGENT_ONBOARDING_REPORT`, inventory/file-map/risk-register,
   `dependency-matrix`, `vulnerability-remediation`, frontend/backend/database
+- [audit/](audit/) GOD MODE §16.1 deliverables —
+  [architecture-clean-code](audit/architecture-clean-code-audit.md) ·
+  [eslint-hardening](audit/eslint-hardening-audit.md) ·
+  [testing-coverage](audit/testing-coverage-audit.md) ·
+  [security-performance](audit/security-performance-audit.md) ·
+  [ai-docs-rules](audit/ai-docs-rules-audit.md)
