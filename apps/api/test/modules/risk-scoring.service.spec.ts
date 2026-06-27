@@ -37,6 +37,8 @@ function createMockRepository() {
     findFirstByIdAndTenant: jest.fn(),
     findRelationsForEntity: jest.fn(),
     findAllByTenant: jest.fn(),
+    findAllForRiskScoring: jest.fn(),
+    countRelationsPerEntity: jest.fn(),
     updateRiskScore: jest.fn(),
   }
 }
@@ -204,20 +206,43 @@ describe('RiskScoringService', () => {
   /* ------------------------------------------------------------------ */
 
   describe('recalculateForTenant', () => {
-    it('should update entities whose risk score changed', async () => {
-      const entity1 = buildEntity({ id: 'e-1', riskScore: 10, type: 'ip', lastSeen: nowDate() })
-      const entity2 = buildEntity({ id: 'e-2', riskScore: 40, type: 'ip', lastSeen: nowDate() })
+    it('should update entities whose risk score changed using a single grouped relation query', async () => {
+      // findAllForRiskScoring returns only the fields the scorer needs
+      const entity1 = { id: 'e-1', type: 'ip', lastSeen: nowDate(), riskScore: 10 }
+      const entity2 = { id: 'e-2', type: 'ip', lastSeen: nowDate(), riskScore: 40 }
 
-      repo.findAllByTenant.mockResolvedValue([entity1, entity2])
-      repo.findRelationsForEntity.mockResolvedValue([])
+      repo.findAllForRiskScoring.mockResolvedValue([entity1, entity2])
+      // countRelationsPerEntity returns zero rows — no relations for either entity
+      repo.countRelationsPerEntity.mockResolvedValue([])
       repo.updateRiskScore.mockResolvedValue(undefined)
 
       const updatedCount = await service.recalculateForTenant(TENANT_ID)
 
-      // entity1 had riskScore=10 but calculated should be ~40 (ip+recency+base), so it changes
-      // entity2 had riskScore=40 which matches calculated, so no update
+      // entity1: base(10)+ip(15)+recency<1day(15)=40, old=10 → changed → update
+      // entity2: same formula → 40, old=40 → unchanged → no update
       expect(updatedCount).toBe(1)
       expect(repo.updateRiskScore).toHaveBeenCalledTimes(1)
+      expect(repo.updateRiskScore).toHaveBeenCalledWith('e-1', TENANT_ID, 40)
+      // Confirm the old N+1 methods are NOT used
+      expect(repo.findAllByTenant).not.toHaveBeenCalled()
+      expect(repo.findRelationsForEntity).not.toHaveBeenCalled()
+    })
+
+    it('should account for relation counts from the grouped query', async () => {
+      const entity = { id: 'e-1', type: 'ip', lastSeen: nowDate(), riskScore: 0 }
+
+      repo.findAllForRiskScoring.mockResolvedValue([entity])
+      // Simulate 6 relations — 6*5=30 (capped)
+      repo.countRelationsPerEntity.mockResolvedValue([
+        { entity_id: 'e-1', relation_count: BigInt(6) },
+      ])
+      repo.updateRiskScore.mockResolvedValue(undefined)
+
+      const updatedCount = await service.recalculateForTenant(TENANT_ID)
+
+      // base(10)+rel(30)+ip(15)+recency(15)=70
+      expect(updatedCount).toBe(1)
+      expect(repo.updateRiskScore).toHaveBeenCalledWith('e-1', TENANT_ID, 70)
     })
   })
 })

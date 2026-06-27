@@ -17,7 +17,7 @@ import { TenantId } from '../../../common/decorators/tenant-id.decorator'
 import { Permission } from '../../../common/enums'
 import { AuthGuard } from '../../../common/guards/auth.guard'
 import { TenantGuard } from '../../../common/guards/tenant.guard'
-import type { TranscriptPolicyRecord, TranscriptStats } from './ai-transcript.service'
+import type { TranscriptPolicyRecord, TranscriptStats } from './ai-transcript.types'
 import type { AiAuditLog, AiChatMessage, AiChatThread } from '@prisma/client'
 
 @ApiTags('ai-transcripts')

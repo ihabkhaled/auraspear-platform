@@ -10,7 +10,6 @@ import {
   UseGuards,
 } from '@nestjs/common'
 import { Throttle } from '@nestjs/throttler'
-import { AiWritebackRepository } from './ai-writeback.repository'
 import { AiWritebackService } from './ai-writeback.service'
 import { ListFindingsQuerySchema } from './dto/list-findings-query.dto'
 import { UpdateFindingStatusSchema } from './dto/update-finding-status.dto'
@@ -26,10 +25,7 @@ import type { AiExecutionFinding } from '@prisma/client'
 @UseGuards(AuthGuard, TenantGuard)
 @Throttle({ default: { limit: 30, ttl: 60000 } })
 export class AiWritebackController {
-  constructor(
-    private readonly repository: AiWritebackRepository,
-    private readonly service: AiWritebackService
-  ) {}
+  constructor(private readonly service: AiWritebackService) {}
 
   /**
    * GET /ai/findings
@@ -42,7 +38,7 @@ export class AiWritebackController {
     @Query() rawQuery: Record<string, string>
   ): Promise<PaginatedResponse<AiExecutionFinding>> {
     const query = ListFindingsQuerySchema.parse(rawQuery)
-    return this.repository.listFindings(tenantId, query)
+    return this.service.listFindings(tenantId, query)
   }
 
   /**
@@ -68,7 +64,7 @@ export class AiWritebackController {
     @Query('agentId') agentId?: string,
     @Query('sourceModule') sourceModule?: string
   ): Promise<AiExecutionFinding[]> {
-    return this.repository.exportFindings(tenantId, { status, agentId, sourceModule })
+    return this.service.exportFindings(tenantId, { status, agentId, sourceModule })
   }
 
   /**
@@ -83,7 +79,7 @@ export class AiWritebackController {
     @Param('entityType') entityType: string,
     @Param('entityId') entityId: string
   ): Promise<AiExecutionFinding[]> {
-    return this.repository.findingsByEntity(tenantId, entityType, entityId)
+    return this.service.findingsByEntity(tenantId, entityType, entityId)
   }
 
   /**

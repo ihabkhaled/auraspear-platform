@@ -5,7 +5,7 @@ import { TenantId } from '../../../common/decorators/tenant-id.decorator'
 import { Permission } from '../../../common/enums'
 import { AuthGuard } from '../../../common/guards/auth.guard'
 import { TenantGuard } from '../../../common/guards/tenant.guard'
-import type { AgentGraphNode, ScheduleHealthSummary } from './agent-graph.service'
+import type { AgentGraphNode, ScheduleHealthSummary } from './agent-graph.types'
 
 @Controller('ai-agents')
 @UseGuards(AuthGuard, TenantGuard)

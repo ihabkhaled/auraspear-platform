@@ -54,7 +54,7 @@ export class KnowledgeRepository {
     })
   }
 
-  async update(id: string, tenantId: string, input: UpdateRunbookInput): Promise<Runbook> {
+  async update(id: string, tenantId: string, input: UpdateRunbookInput): Promise<Runbook | null> {
     const data: Record<string, unknown> = { updatedBy: input.updatedBy }
     if (input.title !== undefined) {
       data.title = input.title
@@ -69,12 +69,9 @@ export class KnowledgeRepository {
       data.tags = input.tags
     }
 
-    const [updated] = await this.prisma.$transaction([
-      this.prisma.runbook.update({ where: { id }, data }),
-      this.prisma.runbook.findFirstOrThrow({ where: { id, tenantId } }),
-    ])
+    await this.prisma.runbook.updateMany({ where: { id, tenantId }, data })
 
-    return updated
+    return this.prisma.runbook.findFirst({ where: { id, tenantId } })
   }
 
   async delete(id: string, tenantId: string): Promise<void> {

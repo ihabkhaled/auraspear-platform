@@ -1,51 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common'
 import { PrismaService } from '../../prisma/prisma.service'
-
-export interface AiOpsWorkspace {
-  agents: {
-    total: number
-    online: number
-    totalSessions24h: number
-  }
-  orchestration: {
-    dispatches24h: number
-    success24h: number
-    failures24h: number
-    pendingApprovals: number
-  }
-  findings: {
-    total: number
-    proposed: number
-    applied: number
-    dismissed: number
-    highConfidence: number
-  }
-  chat: {
-    totalThreads: number
-    totalMessages: number
-    legalHoldCount: number
-  }
-  usage24h: {
-    totalTokens: number
-    estimatedCost: number
-    requests: number
-  }
-  audit: {
-    totalLogs24h: number
-    uniqueActors24h: number
-  }
-  recentActivity: AiOpsRecentItem[]
-}
-
-export interface AiOpsRecentItem {
-  id: string
-  type: string
-  title: string
-  status: string
-  agentId: string | null
-  sourceModule: string | null
-  createdAt: Date
-}
+import type { AiOpsRecentItem, AiOpsWorkspace } from './ai-ops-workspace.types'
 
 @Injectable()
 export class AiOpsWorkspaceService {

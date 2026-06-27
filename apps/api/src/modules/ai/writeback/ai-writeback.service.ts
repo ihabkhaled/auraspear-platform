@@ -26,6 +26,8 @@ import type {
   AiWritebackResponse,
   ParsedAiFinding,
 } from './ai-writeback.types'
+import type { ListFindingsQueryDto } from './dto/list-findings-query.dto'
+import type { PaginatedResponse } from '../../../common/interfaces/pagination.interface'
 import type { AiExecutionFinding } from '@prisma/client'
 
 @Injectable()
@@ -37,6 +39,37 @@ export class AiWritebackService {
     private readonly repository: AiWritebackRepository
   ) {
     this.log = new ServiceLogger(this.appLogger, AppLogFeature.AI, 'AiWritebackService')
+  }
+
+  /**
+   * List AI execution findings with full-text search, filters, tenant-scoped, paginated.
+   */
+  async listFindings(
+    tenantId: string,
+    dto: ListFindingsQueryDto
+  ): Promise<PaginatedResponse<AiExecutionFinding>> {
+    return this.repository.listFindings(tenantId, dto)
+  }
+
+  /**
+   * Export all findings as array (no pagination) for CSV/JSON download.
+   */
+  async exportFindings(
+    tenantId: string,
+    filters: { status?: string; agentId?: string; sourceModule?: string }
+  ): Promise<AiExecutionFinding[]> {
+    return this.repository.exportFindings(tenantId, filters)
+  }
+
+  /**
+   * Get all findings for a specific source entity (alert, case, incident).
+   */
+  async findingsByEntity(
+    tenantId: string,
+    entityType: string,
+    entityId: string
+  ): Promise<AiExecutionFinding[]> {
+    return this.repository.findingsByEntity(tenantId, entityType, entityId)
   }
 
   /**
@@ -113,7 +146,11 @@ export class AiWritebackService {
   ): Promise<{ updated: number }> {
     if (ids.length === 0) return { updated: 0 }
     if (ids.length > 100) {
-      throw new BusinessException(400, 'Maximum 100 findings per bulk action', 'errors.ai.bulkLimitExceeded')
+      throw new BusinessException(
+        400,
+        'Maximum 100 findings per bulk action',
+        'errors.ai.bulkLimitExceeded'
+      )
     }
 
     const updateData: Record<string, unknown> = { status: newStatus }
@@ -298,11 +335,11 @@ export class AiWritebackService {
         break
 
       case 'incident':
-        await this.writeBackToIncident(sourceEntityId, aiResponse)
+        await this.writeBackToIncident(tenantId, sourceEntityId, aiResponse)
         break
 
       case 'case':
-        await this.writeBackToCase(sourceEntityId, aiResponse)
+        await this.writeBackToCase(tenantId, sourceEntityId, aiResponse)
         break
 
       default:
@@ -332,9 +369,20 @@ export class AiWritebackService {
   }
 
   private async writeBackToIncident(
+    tenantId: string,
     incidentId: string,
     response: AiWritebackResponse
   ): Promise<void> {
+    const belongs = await this.repository.incidentBelongsToTenant(tenantId, incidentId)
+    if (!belongs) {
+      this.log.warn(
+        'writeBackToIncident',
+        tenantId,
+        `Incident ${incidentId} not found for tenant — skipping writeback`
+      )
+      return
+    }
+
     const summaryText = response.result.substring(0, AI_SUMMARY_MAX_LENGTH)
 
     await this.repository.createIncidentTimelineEntry({
@@ -345,7 +393,21 @@ export class AiWritebackService {
     })
   }
 
-  private async writeBackToCase(caseId: string, response: AiWritebackResponse): Promise<void> {
+  private async writeBackToCase(
+    tenantId: string,
+    caseId: string,
+    response: AiWritebackResponse
+  ): Promise<void> {
+    const belongs = await this.repository.caseBelongsToTenant(tenantId, caseId)
+    if (!belongs) {
+      this.log.warn(
+        'writeBackToCase',
+        tenantId,
+        `Case ${caseId} not found for tenant — skipping writeback`
+      )
+      return
+    }
+
     const summaryText = response.result.substring(0, AI_SUMMARY_MAX_LENGTH)
 
     await this.repository.createCaseNote({

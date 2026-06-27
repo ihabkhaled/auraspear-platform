@@ -8,7 +8,10 @@ import type {
   EntityGraphNode,
   EntityGraphResponse,
   EntityRecord,
+  EntityRelationCountRow,
   EntityRelationRecord,
+  EntityRiskScoringRecord,
+  EntityScoreUpdate,
   ExtractedEntity,
   RiskBreakdownFactor,
 } from './entities.types'
@@ -264,6 +267,39 @@ export function extractDomainFromRawEvent(rawEvent: Record<string, unknown>): st
   if (typeof name === 'string' && name.includes('.')) return name
 
   return null
+}
+
+/**
+ * Converts the raw `$queryRaw` relation-count rows into a `Map<entityId, count>`
+ * lookup that the risk scorer can use without extra DB round trips (PERF-01).
+ * Postgres COUNT(*) returns bigint; we cast to number here.
+ */
+export function buildRelationCountMap(rows: EntityRelationCountRow[]): Map<string, number> {
+  const map = new Map<string, number>()
+  for (const row of rows) {
+    map.set(row.entity_id, Number(row.relation_count))
+  }
+  return map
+}
+
+/**
+ * Filters entities whose computed risk score has materially changed (delta > 0.01)
+ * and returns `{ id, score }` pairs ready for bulk update.
+ */
+export function buildEntitiesToUpdate(
+  entities: EntityRiskScoringRecord[],
+  relationCountMap: Map<string, number>,
+  scorer: (entity: EntityRiskScoringRecord, relationCount: number) => number
+): EntityScoreUpdate[] {
+  const result: EntityScoreUpdate[] = []
+  for (const entity of entities) {
+    const relationCount = relationCountMap.get(entity.id) ?? 0
+    const newScore = scorer(entity, relationCount)
+    if (Math.abs(newScore - entity.riskScore) > 0.01) {
+      result.push({ id: entity.id, score: newScore })
+    }
+  }
+  return result
 }
 
 export function buildEntityListFromAlert(alert: AlertExtractionInput): ExtractedEntity[] {

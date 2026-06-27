@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common'
 import { Interval } from '@nestjs/schedule'
 import { JobType } from './enums/job.enums'
-import { SCHEDULE_INTERVAL_MS } from './jobs.constants'
+import { SCHEDULE_INTERVAL_MS, SCHEDULER_RULE_PAGE_SIZE } from './jobs.constants'
 import { JobService } from './jobs.service'
 import { countScheduleResults, getCurrentScheduleWindow } from './jobs.utilities'
 import { AppLogFeature } from '../../common/enums'
@@ -58,62 +58,88 @@ export class JobSchedulerService {
   private async scheduleDetectionRules(): Promise<number> {
     this.log.debug('scheduleDetectionRules', '', 'Starting detection rule scheduling')
 
-    // TODO: Extract to DetectionRulesRepository.findActiveRules() — direct Prisma
-    // access in services violates the repository pattern.
-    const activeRules = await this.prisma.detectionRule.findMany({
-      where: { status: 'active' },
-      select: { id: true, tenantId: true, name: true },
-    })
-
     const currentWindow = getCurrentScheduleWindow()
-    const results = await Promise.allSettled(
-      activeRules.map(rule =>
-        this.jobService.enqueue({
-          tenantId: rule.tenantId,
-          type: JobType.DETECTION_RULE_EXECUTION,
-          payload: { ruleId: rule.id },
-          maxAttempts: 1,
-          idempotencyKey: `detection:${rule.id}:${currentWindow}`,
-        })
-      )
-    )
+    let totalEnqueued = 0
 
-    const { enqueued, rejectedIndices } = countScheduleResults(results)
-    this.logRejectedRules(rejectedIndices, activeRules, 'scheduleDetectionRules', 'DetectionRule')
-    return enqueued
+    // Page through active rules in bounded batches (PERF-02): the previous
+    // unbounded findMany + Promise.allSettled fanned out over every active rule
+    // across all tenants. Sequential pagination is the documented exception to
+    // no-await-in-loop (each page depends on the prior offset).
+    for (let skip = 0; ; skip += SCHEDULER_RULE_PAGE_SIZE) {
+      const activeRules = await this.prisma.detectionRule.findMany({
+        where: { status: 'active' },
+        select: { id: true, tenantId: true, name: true },
+        orderBy: { id: 'asc' },
+        take: SCHEDULER_RULE_PAGE_SIZE,
+        skip,
+      })
+      if (activeRules.length === 0) break
+
+      const results = await Promise.allSettled(
+        activeRules.map(rule =>
+          this.jobService.enqueue({
+            tenantId: rule.tenantId,
+            type: JobType.DETECTION_RULE_EXECUTION,
+            payload: { ruleId: rule.id },
+            maxAttempts: 1,
+            idempotencyKey: `detection:${rule.id}:${currentWindow}`,
+          })
+        )
+      )
+
+      const { enqueued, rejectedIndices } = countScheduleResults(results)
+      this.logRejectedRules(rejectedIndices, activeRules, 'scheduleDetectionRules', 'DetectionRule')
+      totalEnqueued += enqueued
+
+      if (activeRules.length < SCHEDULER_RULE_PAGE_SIZE) break
+    }
+
+    return totalEnqueued
   }
 
   private async scheduleCorrelationRules(): Promise<number> {
     this.log.debug('scheduleCorrelationRules', '', 'Starting correlation rule scheduling')
 
-    // TODO: Extract to CorrelationRulesRepository.findActiveRules() — direct Prisma
-    // access in services violates the repository pattern.
-    const activeRules = await this.prisma.correlationRule.findMany({
-      where: { status: 'active' },
-      select: { id: true, tenantId: true, title: true },
-    })
-
     const currentWindow = getCurrentScheduleWindow()
-    const results = await Promise.allSettled(
-      activeRules.map(rule =>
-        this.jobService.enqueue({
-          tenantId: rule.tenantId,
-          type: JobType.CORRELATION_RULE_EXECUTION,
-          payload: { ruleId: rule.id },
-          maxAttempts: 1,
-          idempotencyKey: `correlation:${rule.id}:${currentWindow}`,
-        })
-      )
-    )
+    let totalEnqueued = 0
 
-    const { enqueued, rejectedIndices } = countScheduleResults(results)
-    this.logRejectedRules(
-      rejectedIndices,
-      activeRules,
-      'scheduleCorrelationRules',
-      'CorrelationRule'
-    )
-    return enqueued
+    // Bounded pagination over active correlation rules (PERF-02) — see
+    // scheduleDetectionRules for the rationale.
+    for (let skip = 0; ; skip += SCHEDULER_RULE_PAGE_SIZE) {
+      const activeRules = await this.prisma.correlationRule.findMany({
+        where: { status: 'active' },
+        select: { id: true, tenantId: true, title: true },
+        orderBy: { id: 'asc' },
+        take: SCHEDULER_RULE_PAGE_SIZE,
+        skip,
+      })
+      if (activeRules.length === 0) break
+
+      const results = await Promise.allSettled(
+        activeRules.map(rule =>
+          this.jobService.enqueue({
+            tenantId: rule.tenantId,
+            type: JobType.CORRELATION_RULE_EXECUTION,
+            payload: { ruleId: rule.id },
+            maxAttempts: 1,
+            idempotencyKey: `correlation:${rule.id}:${currentWindow}`,
+          })
+        )
+      )
+
+      const { enqueued, rejectedIndices } = countScheduleResults(results)
+      this.logRejectedRules(
+        rejectedIndices,
+        activeRules,
+        'scheduleCorrelationRules',
+        'CorrelationRule'
+      )
+      totalEnqueued += enqueued
+
+      if (activeRules.length < SCHEDULER_RULE_PAGE_SIZE) break
+    }
+
+    return totalEnqueued
   }
 
   /* ---------------------------------------------------------------- */

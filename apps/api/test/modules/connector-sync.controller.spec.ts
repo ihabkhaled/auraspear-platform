@@ -1,28 +1,18 @@
-import { toDay } from '../../src/common/utils/date-time.utility'
 import { ConnectorSyncController } from '../../src/modules/connector-sync/connector-sync.controller'
 
 const TENANT_ID = 'tenant-001'
 
 const mockSyncService = {
   syncConnector: jest.fn(),
-}
-
-function createMockPrisma() {
-  return {
-    connectorConfig: {
-      findMany: jest.fn(),
-    },
-  }
+  getSyncStatus: jest.fn(),
 }
 
 describe('ConnectorSyncController', () => {
   let controller: ConnectorSyncController
-  let prisma: ReturnType<typeof createMockPrisma>
 
   beforeEach(() => {
     jest.clearAllMocks()
-    prisma = createMockPrisma()
-    controller = new ConnectorSyncController(mockSyncService as never, prisma as never)
+    controller = new ConnectorSyncController(mockSyncService as never)
   })
 
   describe('triggerSync', () => {
@@ -56,17 +46,8 @@ describe('ConnectorSyncController', () => {
   })
 
   describe('getSyncStatus', () => {
-    it('should return formatted sync status for all connectors', async () => {
-      const now = toDay('2026-03-14T12:00:00Z').toDate()
-      prisma.connectorConfig.findMany.mockResolvedValue([
-        { type: 'graylog', lastSyncAt: now, syncEnabled: true, enabled: true },
-        { type: 'wazuh', lastSyncAt: null, syncEnabled: false, enabled: true },
-        { type: 'misp', lastSyncAt: now, syncEnabled: true, enabled: false },
-      ])
-
-      const result = await controller.getSyncStatus(TENANT_ID)
-
-      expect(result).toEqual([
+    it('should return formatted sync status for all connectors via service', async () => {
+      const mockStatus = [
         {
           type: 'graylog',
           lastSyncAt: '2026-03-14T12:00:00.000Z',
@@ -74,18 +55,23 @@ describe('ConnectorSyncController', () => {
           enabled: true,
         },
         { type: 'wazuh', lastSyncAt: null, syncEnabled: false, enabled: true },
-        { type: 'misp', lastSyncAt: '2026-03-14T12:00:00.000Z', syncEnabled: true, enabled: false },
-      ])
+        {
+          type: 'misp',
+          lastSyncAt: '2026-03-14T12:00:00.000Z',
+          syncEnabled: true,
+          enabled: false,
+        },
+      ]
+      mockSyncService.getSyncStatus.mockResolvedValue(mockStatus)
 
-      expect(prisma.connectorConfig.findMany).toHaveBeenCalledWith({
-        where: { tenantId: TENANT_ID },
-        select: { type: true, lastSyncAt: true, syncEnabled: true, enabled: true },
-        orderBy: { type: 'asc' },
-      })
+      const result = await controller.getSyncStatus(TENANT_ID)
+
+      expect(result).toEqual(mockStatus)
+      expect(mockSyncService.getSyncStatus).toHaveBeenCalledWith(TENANT_ID)
     })
 
     it('should return empty array when no connectors exist', async () => {
-      prisma.connectorConfig.findMany.mockResolvedValue([])
+      mockSyncService.getSyncStatus.mockResolvedValue([])
 
       const result = await controller.getSyncStatus(TENANT_ID)
 

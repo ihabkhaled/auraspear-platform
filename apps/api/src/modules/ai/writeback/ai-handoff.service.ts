@@ -10,45 +10,13 @@ import { BusinessException } from '../../../common/exceptions/business.exception
 import { getYear } from '../../../common/utils/date-time.utility'
 import { buildNextSequenceNumber } from '../../../common/utils/sequence-number.utility'
 import { PrismaService } from '../../../prisma/prisma.service'
-import type { AiExecutionFinding, AiFindingOutputLink } from '@prisma/client'
-
-export interface PromoteInput {
-  tenantId: string
-  findingId: string
-  targetModule: string
-  actorUserId: string
-  actorEmail: string
-  title?: string
-  description?: string
-}
-
-export interface PromoteResult {
-  finding: AiExecutionFinding
-  link: AiFindingOutputLink
-  createdEntityId: string
-  targetModule: string
-}
-
-export interface HandoffHistoryItem {
-  id: string
-  findingId: string
-  findingTitle: string
-  findingType: string
-  severity: string | null
-  agentId: string | null
-  sourceModule: string | null
-  linkedModule: string
-  linkedEntityType: string
-  linkedEntityId: string
-  createdAt: Date
-}
-
-export interface HandoffStats {
-  totalPromotions: number
-  byTarget: Array<{ linkedModule: string; count: number }>
-  byAgent: Array<{ agentId: string; count: number }>
-  last24h: number
-}
+import type {
+  HandoffHistoryItem,
+  HandoffStats,
+  PromoteInput,
+  PromoteResult,
+} from './ai-handoff.types'
+import type { AiFindingOutputLink } from '@prisma/client'
 
 @Injectable()
 export class AiHandoffService {
@@ -269,6 +237,7 @@ export class AiHandoffService {
     return this.prisma.aiFindingOutputLink.findMany({
       where: { tenantId, findingId },
       orderBy: { createdAt: 'desc' },
+      take: 500,
     })
   }
 

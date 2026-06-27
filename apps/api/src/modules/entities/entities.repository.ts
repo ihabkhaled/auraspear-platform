@@ -1,7 +1,12 @@
 import { Injectable } from '@nestjs/common'
 import { nowDate } from '../../common/utils/date-time.utility'
 import { PrismaService } from '../../prisma/prisma.service'
-import type { EntityRecord, EntityRelationRecord } from './entities.types'
+import type {
+  EntityRecord,
+  EntityRelationRecord,
+  EntityRiskScoringRecord,
+  EntityRelationCountRow,
+} from './entities.types'
 import type { Prisma } from '@prisma/client'
 
 @Injectable()
@@ -101,6 +106,41 @@ export class EntitiesRepository {
 
   async findAllByTenant(tenantId: string): Promise<EntityRecord[]> {
     return this.prisma.entity.findMany({ where: { tenantId } })
+  }
+
+  /**
+   * Loads entities for bulk risk-score recalculation.
+   * Selects only the fields the scorer needs; bounded by `take` to prevent
+   * unbounded memory usage on large tenants (PERF-01).
+   */
+  async findAllForRiskScoring(tenantId: string, take: number): Promise<EntityRiskScoringRecord[]> {
+    return this.prisma.entity.findMany({
+      where: { tenantId },
+      select: { id: true, type: true, lastSeen: true, riskScore: true },
+      take,
+    })
+  }
+
+  /**
+   * Returns the relation count per entity in a SINGLE round trip using a raw
+   * aggregate query. Both sides of the edge (fromEntityId / toEntityId) are
+   * counted so the result matches what `findRelationsForEntity` returns.
+   * Scoped by `tenantId` (PERF-01, rule 8).
+   */
+  async countRelationsPerEntity(tenantId: string): Promise<EntityRelationCountRow[]> {
+    return this.prisma.$queryRaw<EntityRelationCountRow[]>`
+      SELECT entity_id, COUNT(*) AS relation_count
+      FROM (
+        SELECT from_entity_id AS entity_id
+        FROM entity_relations
+        WHERE tenant_id = ${tenantId}::uuid
+        UNION ALL
+        SELECT to_entity_id AS entity_id
+        FROM entity_relations
+        WHERE tenant_id = ${tenantId}::uuid
+      ) edges
+      GROUP BY entity_id
+    `
   }
 
   async upsertByTypeAndValue(

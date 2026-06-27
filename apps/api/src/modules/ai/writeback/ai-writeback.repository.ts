@@ -347,6 +347,7 @@ export class AiWritebackRepository {
         sourceEntityId: entityId,
       },
       orderBy: { createdAt: 'desc' },
+      take: 500,
     })
   }
 
@@ -388,9 +389,13 @@ export class AiWritebackRepository {
       updateData['appliedAt'] = nowDate()
     }
 
-    return this.prisma.aiExecutionFinding.update({
-      where: { id },
+    await this.prisma.aiExecutionFinding.updateMany({
+      where: { id, tenantId },
       data: updateData,
+    })
+
+    return this.prisma.aiExecutionFinding.findFirst({
+      where: { id, tenantId },
     })
   }
 
@@ -425,6 +430,24 @@ export class AiWritebackRepository {
       where: { id: alertId, tenantId },
       data,
     })
+  }
+
+  /** Verify an incident belongs to the given tenant. Returns true if found. */
+  async incidentBelongsToTenant(tenantId: string, incidentId: string): Promise<boolean> {
+    const row = await this.prisma.incident.findFirst({
+      where: { id: incidentId, tenantId },
+      select: { id: true },
+    })
+    return row !== null
+  }
+
+  /** Verify a case belongs to the given tenant. Returns true if found. */
+  async caseBelongsToTenant(tenantId: string, caseId: string): Promise<boolean> {
+    const row = await this.prisma.case.findFirst({
+      where: { id: caseId, tenantId },
+      select: { id: true },
+    })
+    return row !== null
   }
 
   /** Create an incident timeline entry (AI writeback). */

@@ -437,7 +437,14 @@ export class AiAgentsService {
     await this.validateToolExists(toolId, agentId)
     await this.validateToolNameUnique(agentId, dto.name, toolId)
 
-    const updated = await this.repository.updateTool({ id: toolId }, buildToolUpdateData(dto))
+    const updated = await this.repository.updateTool(
+      { id: toolId, tenantId: user.tenantId },
+      buildToolUpdateData(dto)
+    )
+
+    if (!updated) {
+      throw new BusinessException(404, `Tool ${toolId} not found`, 'errors.aiAgents.toolNotFound')
+    }
 
     this.log.success('updateTool', user.tenantId, {
       agentId,
@@ -496,7 +503,7 @@ export class AiAgentsService {
     await this.getAgentById(agentId, tenantId)
     await this.validateToolExists(toolId, agentId)
 
-    await this.repository.deleteTool({ id: toolId })
+    await this.repository.deleteTool({ id: toolId, tenantId })
 
     this.log.success('deleteTool', tenantId, { agentId, toolId, actorEmail })
 

@@ -1,16 +1,29 @@
 import { Injectable, Logger } from '@nestjs/common'
-import { BASE_EXISTENCE_SCORE, MAX_RISK_SCORE, RELATION_WEIGHT } from './entities.constants'
+import {
+  BASE_EXISTENCE_SCORE,
+  MAX_RISK_SCORE,
+  RELATION_WEIGHT,
+  RISK_SCORE_BATCH_SIZE,
+  RISK_SCORE_MAX_ENTITIES,
+} from './entities.constants'
 import { EntitiesRepository } from './entities.repository'
 import {
   getEntityTypeWeight,
   computeRecencyScore,
   buildRiskBreakdownFactors,
   sumFactorScores,
+  buildRelationCountMap,
+  buildEntitiesToUpdate,
 } from './entities.utilities'
 import { AppLogFeature, AppLogOutcome, AppLogSourceType } from '../../common/enums'
 import { BusinessException } from '../../common/exceptions/business.exception'
 import { AppLoggerService } from '../../common/services/app-logger.service'
-import type { EntityRecord, RiskBreakdownResponse } from './entities.types'
+import { processInBatches } from '../../common/utils/batch.utility'
+import type {
+  EntityRiskScoringRecord,
+  EntityScoreUpdate,
+  RiskBreakdownResponse,
+} from './entities.types'
 
 @Injectable()
 export class RiskScoringService {
@@ -21,7 +34,7 @@ export class RiskScoringService {
     private readonly appLogger: AppLoggerService
   ) {}
 
-  calculateRiskScore(entity: EntityRecord, relationCount: number): number {
+  calculateRiskScore(entity: EntityRiskScoringRecord, relationCount: number): number {
     let score = BASE_EXISTENCE_SCORE
     score += Math.min(relationCount * RELATION_WEIGHT, 30)
     score += getEntityTypeWeight(entity.type)
@@ -63,22 +76,32 @@ export class RiskScoringService {
   }
 
   async recalculateForTenant(tenantId: string): Promise<number> {
-    const entities = await this.entitiesRepository.findAllByTenant(tenantId)
-
-    const updateResults = await Promise.all(
-      entities.map(async entity => {
-        const relations = await this.entitiesRepository.findRelationsForEntity(entity.id, tenantId)
-        const newScore = this.calculateRiskScore(entity, relations.length)
-
-        if (Math.abs(newScore - entity.riskScore) > 0.01) {
-          await this.entitiesRepository.updateRiskScore(entity.id, tenantId, newScore)
-          return true
-        }
-        return false
-      })
+    // Single query for all entity fields the scorer needs — bounded by RISK_SCORE_MAX_ENTITIES.
+    const entities = await this.entitiesRepository.findAllForRiskScoring(
+      tenantId,
+      RISK_SCORE_MAX_ENTITIES
     )
 
-    const updatedCount = updateResults.filter(Boolean).length
+    // Single grouped query for relation counts — replaces N per-entity round trips (PERF-01).
+    const countRows = await this.entitiesRepository.countRelationsPerEntity(tenantId)
+    const relationCountMap = buildRelationCountMap(countRows)
+
+    // Collect only the entities whose score actually changed.
+    const toUpdate = buildEntitiesToUpdate(
+      entities,
+      relationCountMap,
+      this.calculateRiskScore.bind(this)
+    )
+
+    // Batch updates in chunks of 50 using Promise.allSettled (rule 36).
+    const settled = await processInBatches(
+      toUpdate,
+      RISK_SCORE_BATCH_SIZE,
+      (update: EntityScoreUpdate) =>
+        this.entitiesRepository.updateRiskScore(update.id, tenantId, update.score)
+    )
+
+    const updatedCount = settled.filter(r => r.status === 'fulfilled').length
 
     this.logger.log(
       `Recalculated risk scores for tenant ${tenantId}: ${String(updatedCount)} entities updated`

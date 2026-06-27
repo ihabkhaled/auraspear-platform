@@ -1,28 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common'
 import { PrismaService } from '../../../prisma/prisma.service'
+import type { TranscriptPolicyRecord, TranscriptStats } from './ai-transcript.types'
 import type { AiAuditLog, AiChatMessage, AiChatThread } from '@prisma/client'
-
-export interface TranscriptStats {
-  totalThreads: number
-  totalMessages: number
-  totalAuditLogs: number
-  threadsOnHold: number
-  threadsRedacted: number
-}
-
-export interface TranscriptPolicyRecord {
-  id: string
-  tenantId: string
-  chatRetentionDays: number
-  auditRetentionDays: number
-  autoRedactPii: boolean
-  requireLegalHold: boolean
-  lastCleanupAt: Date | null
-  lastCleanupCount: number
-  createdBy: string
-  createdAt: Date
-  updatedAt: Date
-}
 
 @Injectable()
 export class AiTranscriptService {
@@ -87,10 +66,7 @@ export class AiTranscriptService {
 
   /* ── Thread messages (for transcript view) ─────────── */
 
-  async getThreadMessages(
-    tenantId: string,
-    threadId: string
-  ): Promise<AiChatMessage[]> {
+  async getThreadMessages(tenantId: string, threadId: string): Promise<AiChatMessage[]> {
     return this.prisma.aiChatMessage.findMany({
       where: { tenantId, threadId },
       orderBy: { sequenceNum: 'asc' },
@@ -206,11 +182,7 @@ export class AiTranscriptService {
     return { thread, messages }
   }
 
-  async exportAuditLogs(
-    tenantId: string,
-    from?: string,
-    to?: string
-  ): Promise<AiAuditLog[]> {
+  async exportAuditLogs(tenantId: string, from?: string, to?: string): Promise<AiAuditLog[]> {
     const where: Record<string, unknown> = { tenantId }
     if (from || to) {
       const dateFilter: Record<string, Date> = {}
@@ -299,7 +271,9 @@ export class AiTranscriptService {
         where: { tenantId },
         data: { lastCleanupAt: new Date(), lastCleanupCount: chats + audits },
       })
-      this.logger.log(`Transcript cleanup: deleted ${String(chats)} threads, ${String(audits)} audit logs for tenant ${tenantId}`)
+      this.logger.log(
+        `Transcript cleanup: deleted ${String(chats)} threads, ${String(audits)} audit logs for tenant ${tenantId}`
+      )
     }
 
     return { chats, audits }

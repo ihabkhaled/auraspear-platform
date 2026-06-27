@@ -84,6 +84,10 @@ export class KnowledgeService {
       updatedBy: email,
     })
 
+    if (!updated) {
+      throw new BusinessException(404, `Runbook ${id} not found`, 'errors.knowledge.notFound')
+    }
+
     this.logger.log(`update completed for runbook ${id}`)
     this.logAction('update', tenantId, email, id, { title: dto.title ?? existing.title })
     return updated

@@ -1,5 +1,6 @@
 import { AlertSeverity, AlertStatus } from '../../common/enums'
 import { nowMs, toDay, toIso } from '../../common/utils/date-time.utility'
+import type { ConnectorSyncStatusRow, ConnectorSyncStatusItem } from './connector-sync.types'
 import type { Prisma } from '@prisma/client'
 
 export function mapGraylogPriorityToSeverity(priority: number): AlertSeverity {
@@ -69,4 +70,15 @@ export function countFulfilledResults<T>(results: Array<PromiseSettledResult<T>>
   }
 
   return { fulfilled, failedCount }
+}
+
+export function mapConnectorSyncStatusRows(
+  rows: ConnectorSyncStatusRow[]
+): ConnectorSyncStatusItem[] {
+  return rows.map(row => ({
+    type: row.type,
+    lastSyncAt: row.lastSyncAt ? toIso(row.lastSyncAt) : null,
+    syncEnabled: row.syncEnabled,
+    enabled: row.enabled,
+  }))
 }

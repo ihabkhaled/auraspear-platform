@@ -42,6 +42,23 @@ export interface RiskBreakdownResponse {
   factors: RiskBreakdownFactor[]
 }
 
+export interface EntityRiskScoringRecord {
+  id: string
+  type: string
+  lastSeen: Date
+  riskScore: number
+}
+
+export interface EntityScoreUpdate {
+  id: string
+  score: number
+}
+
+export interface EntityRelationCountRow {
+  entity_id: string
+  relation_count: bigint
+}
+
 export interface MsspTenantSummary {
   tenantId: string
   tenantName: string

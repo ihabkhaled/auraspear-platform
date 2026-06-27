@@ -1,15 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common'
 import { PrismaService } from '../../../prisma/prisma.service'
-
-export interface SearchResult {
-  id: string
-  module: string
-  entityType: string
-  title: string
-  snippet: string
-  score: number
-  createdAt: Date | string
-}
+import type { SearchResult } from './semantic-search.types'
 
 @Injectable()
 export class SemanticSearchService {

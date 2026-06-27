@@ -7,8 +7,13 @@ import {
   SYNCABLE_TYPES_SET,
 } from './connector-sync.constants'
 import { ConnectorSyncRepository } from './connector-sync.repository'
-import { buildGraylogAlertData, countFulfilledResults } from './connector-sync.utilities'
+import {
+  buildGraylogAlertData,
+  countFulfilledResults,
+  mapConnectorSyncStatusRows,
+} from './connector-sync.utilities'
 import { AppLogFeature, ConnectorType } from '../../common/enums'
+import type { ConnectorSyncStatusItem } from './connector-sync.types'
 import { AppLoggerService } from '../../common/services/app-logger.service'
 import { ServiceLogger } from '../../common/services/service-logger'
 import { processInBatches } from '../../common/utils/batch.utility'
@@ -93,6 +98,15 @@ export class ConnectorSyncService {
       this.log.error('syncConnector', tenantId, error, { connectorType: type })
       return { success: false, message }
     }
+  }
+
+  /**
+   * Get sync status for all connectors of the current tenant.
+   * Called from the controller when the user views the sync dashboard.
+   */
+  async getSyncStatus(tenantId: string): Promise<ConnectorSyncStatusItem[]> {
+    const rows = await this.repository.findConnectorSyncStatus(tenantId)
+    return mapConnectorSyncStatusRows(rows)
   }
 
   private async syncAllTenants(): Promise<void> {

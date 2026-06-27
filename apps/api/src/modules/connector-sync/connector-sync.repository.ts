@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common'
 import { nowDate } from '../../common/utils/date-time.utility'
 import { PrismaService } from '../../prisma/prisma.service'
+import type { ConnectorSyncStatusRow } from './connector-sync.types'
 import type { Alert, ConnectorType, Prisma } from '@prisma/client'
 
 @Injectable()
@@ -42,5 +43,18 @@ export class ConnectorSyncRepository {
     update: Prisma.AlertUncheckedUpdateInput
   }): Promise<Alert> {
     return this.prisma.alert.upsert(params)
+  }
+
+  async findConnectorSyncStatus(tenantId: string): Promise<ConnectorSyncStatusRow[]> {
+    return this.prisma.connectorConfig.findMany({
+      where: { tenantId },
+      select: {
+        type: true,
+        lastSyncAt: true,
+        syncEnabled: true,
+        enabled: true,
+      },
+      orderBy: { type: 'asc' },
+    })
   }
 }

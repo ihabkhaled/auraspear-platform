@@ -7,7 +7,7 @@ import { TenantId } from '../../../common/decorators/tenant-id.decorator'
 import { Permission } from '../../../common/enums'
 import { AuthGuard } from '../../../common/guards/auth.guard'
 import { TenantGuard } from '../../../common/guards/tenant.guard'
-import type { HandoffStats, PromoteResult } from './ai-handoff.service'
+import type { HandoffStats, PromoteResult } from './ai-handoff.types'
 import type { JwtPayload } from '../../../common/interfaces/authenticated-request.interface'
 import type { AiFindingOutputLink } from '@prisma/client'
 

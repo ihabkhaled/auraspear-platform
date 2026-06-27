@@ -311,14 +311,15 @@ export class AiAgentsRepository {
   }
 
   async updateTool(
-    where: { id: string },
-    data: Prisma.AiAgentToolUpdateInput
-  ): Promise<AiAgentTool> {
-    return this.prisma.aiAgentTool.update({ where, data })
+    where: { id: string; tenantId: string },
+    data: Record<string, unknown>
+  ): Promise<AiAgentTool | null> {
+    await this.prisma.aiAgentTool.updateMany({ where, data })
+    return this.prisma.aiAgentTool.findFirst({ where: { id: where.id } })
   }
 
-  async deleteTool(where: { id: string }): Promise<AiAgentTool> {
-    return this.prisma.aiAgentTool.delete({ where })
+  async deleteTool(where: { id: string; tenantId: string }): Promise<void> {
+    await this.prisma.aiAgentTool.deleteMany({ where })
   }
 
   async countTools(where: Prisma.AiAgentToolWhereInput): Promise<number> {

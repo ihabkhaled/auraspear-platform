@@ -1,31 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common'
+import { CORE_AGENT_IDS } from './agent-graph.constants'
 import { PrismaService } from '../../../prisma/prisma.service'
 import { AGENT_ALIAS_MAP, FEATURE_TO_AGENT_MAP } from '../../agent-config/agent-config.constants'
 import { AGENT_DISPLAY_NAMES } from '../../ai/ai.constants'
-
-export interface AgentGraphNode {
-  agentId: string
-  displayName: string
-  isEnabled: boolean
-  isCore: boolean
-  executionAgent: string | null
-  schedules: Array<{ id: string; cronExpression: string; isEnabled: boolean }>
-  features: string[]
-  lastStatus: string | null
-  tokenUsage: number
-}
-
-export interface ScheduleHealthSummary {
-  totalSchedules: number
-  enabledSchedules: number
-  disabledSchedules: number
-  totalAgents: number
-  enabledAgents: number
-  coreAgents: number
-  specialistAgents: number
-}
-
-const CORE_AGENT_IDS = new Set(Object.values(FEATURE_TO_AGENT_MAP))
+import type { AgentGraphNode, ScheduleHealthSummary } from './agent-graph.types'
 
 @Injectable()
 export class AgentGraphService {

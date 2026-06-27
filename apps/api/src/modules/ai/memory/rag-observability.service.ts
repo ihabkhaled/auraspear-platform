@@ -3,24 +3,7 @@ import { EmbeddingService } from './embedding.service'
 import { MemoryRetrievalService } from './memory-retrieval.service'
 import { getUserMemoryDelegate } from './memory.types'
 import { PrismaService } from '../../../prisma/prisma.service'
-import type { RetrievedMemory } from './memory.types'
-
-export interface RagTraceResult {
-  query: string
-  memoriesRetrieved: RetrievedMemory[]
-  totalMemoriesScanned: number
-  embeddingModel: string | null
-  similarityThreshold: number
-  topN: number
-  retrievalDurationMs: number
-}
-
-export interface RagStats {
-  totalRetrievals24h: number
-  avgMemoriesPerRetrieval: number
-  avgSimilarityScore: number
-  topCategories: Array<{ category: string; count: number }>
-}
+import type { RagStats, RagTraceResult } from './rag-observability.types'
 
 @Injectable()
 export class RagObservabilityService {

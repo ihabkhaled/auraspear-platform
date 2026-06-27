@@ -6,7 +6,7 @@ import { TenantId } from '../../common/decorators/tenant-id.decorator'
 import { Permission } from '../../common/enums'
 import { AuthGuard } from '../../common/guards/auth.guard'
 import { TenantGuard } from '../../common/guards/tenant.guard'
-import type { AiOpsWorkspace } from './ai-ops-workspace.service'
+import type { AiOpsWorkspace } from './ai-ops-workspace.types'
 
 @ApiTags('ai-ops')
 @ApiBearerAuth()
