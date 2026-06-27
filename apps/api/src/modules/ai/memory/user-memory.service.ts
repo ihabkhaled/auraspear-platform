@@ -1,8 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common'
 import { EmbeddingService } from './embedding.service'
-import { getUserMemoryDelegate } from './memory.types'
+import { UserMemoryRepository } from './user-memory.repository'
+import { buildAdminMemoryWhere, buildUserMemoryWhere } from './user-memory.utilities'
 import { BusinessException } from '../../../common/exceptions/business.exception'
-import { PrismaService } from '../../../prisma/prisma.service'
 import type { MemoryStatsResponse, RetentionPolicyRecord, UserMemoryRecord } from './memory.types'
 
 @Injectable()
@@ -10,7 +10,7 @@ export class UserMemoryService {
   private readonly logger = new Logger(UserMemoryService.name)
 
   constructor(
-    private readonly prisma: PrismaService,
+    private readonly userMemoryRepository: UserMemoryRepository,
     private readonly embeddingService: EmbeddingService
   ) {}
 
@@ -19,23 +19,16 @@ export class UserMemoryService {
     userId: string,
     options?: { category?: string; search?: string; limit?: number; offset?: number }
   ): Promise<{ data: UserMemoryRecord[]; total: number }> {
-    const where: Record<string, unknown> = { tenantId, userId, isDeleted: false }
-
-    if (options?.category) {
-      where['category'] = options.category
-    }
-    if (options?.search) {
-      where['content'] = { contains: options.search, mode: 'insensitive' }
-    }
+    const where = buildUserMemoryWhere(tenantId, userId, {
+      category: options?.category,
+      search: options?.search,
+    })
+    const limit = options?.limit ?? 50
+    const offset = options?.offset ?? 0
 
     const [data, total] = await Promise.all([
-      getUserMemoryDelegate(this.prisma).findMany({
-        where,
-        orderBy: { updatedAt: 'desc' },
-        take: options?.limit ?? 50,
-        skip: options?.offset ?? 0,
-      }),
-      getUserMemoryDelegate(this.prisma).count({ where }),
+      this.userMemoryRepository.findMemories(where, limit, offset),
+      this.userMemoryRepository.countMemories(where),
     ])
 
     return { data, total }
@@ -48,15 +41,12 @@ export class UserMemoryService {
   ): Promise<UserMemoryRecord> {
     const embedding = await this.safeGenerateEmbedding(tenantId, input.content)
 
-    return getUserMemoryDelegate(this.prisma).create({
-      data: {
-        tenantId,
-        userId,
-        content: input.content,
-        category: input.category ?? 'fact',
-        embedding,
-        sourceType: 'user_edit',
-      },
+    return this.userMemoryRepository.createMemory(tenantId, {
+      userId,
+      content: input.content,
+      category: input.category ?? 'fact',
+      embedding,
+      sourceType: 'user_edit',
     })
   }
 
@@ -73,39 +63,32 @@ export class UserMemoryService {
         ? memory.embedding
         : await this.safeGenerateEmbedding(tenantId, input.content)
 
-    return getUserMemoryDelegate(this.prisma).update({
-      where: { id: memoryId },
-      data: {
-        content: input.content,
-        category: input.category ?? memory.category,
-        embedding,
-        sourceType: 'user_edit',
-      },
+    return this.userMemoryRepository.updateMemory(memoryId, {
+      content: input.content,
+      category: input.category ?? memory.category,
+      embedding,
+      sourceType: 'user_edit',
     })
   }
 
   async deleteMemory(tenantId: string, userId: string, memoryId: string): Promise<void> {
     await this.verifyOwnership(tenantId, userId, memoryId)
 
-    await getUserMemoryDelegate(this.prisma).update({
-      where: { id: memoryId },
-      data: { isDeleted: true },
-    })
+    await this.userMemoryRepository.softDeleteMemory(memoryId)
 
     this.logger.log(`Memory ${memoryId} soft-deleted by user ${userId}`)
   }
 
   async deleteAllMemories(tenantId: string, userId: string): Promise<number> {
-    const result = await getUserMemoryDelegate(this.prisma).updateMany({
-      where: { tenantId, userId, isDeleted: false },
-      data: { isDeleted: true },
+    const result = await this.userMemoryRepository.softDeleteManyMemories({
+      tenantId,
+      userId,
+      isDeleted: false,
     })
 
     this.logger.log(`All memories (${String(result.count)}) soft-deleted for user ${userId}`)
     return result.count
   }
-
-  /* ── Governance: admin list (cross-user) ─────────────── */
 
   async listAllMemories(
     tenantId: string,
@@ -117,56 +100,28 @@ export class UserMemoryService {
       offset?: number
     }
   ): Promise<{ data: UserMemoryRecord[]; total: number }> {
-    const where: Record<string, unknown> = { tenantId, isDeleted: false }
-
-    if (options?.userId) {
-      where['userId'] = options.userId
-    }
-    if (options?.category) {
-      where['category'] = options.category
-    }
-    if (options?.search) {
-      where['content'] = { contains: options.search, mode: 'insensitive' }
-    }
+    const where = buildAdminMemoryWhere(tenantId, {
+      userId: options?.userId,
+      category: options?.category,
+      search: options?.search,
+    })
+    const limit = options?.limit ?? 50
+    const offset = options?.offset ?? 0
 
     const [data, total] = await Promise.all([
-      getUserMemoryDelegate(this.prisma).findMany({
-        where,
-        orderBy: { updatedAt: 'desc' },
-        take: options?.limit ?? 50,
-        skip: options?.offset ?? 0,
-      }),
-      getUserMemoryDelegate(this.prisma).count({ where }),
+      this.userMemoryRepository.findMemories(where, limit, offset),
+      this.userMemoryRepository.countMemories(where),
     ])
 
     return { data, total }
   }
 
-  /* ── Governance: stats ─────────────────────────────── */
-
   async getMemoryStats(tenantId: string): Promise<MemoryStatsResponse> {
     const [totalActive, totalDeleted, byCategory, byUser] = await Promise.all([
-      getUserMemoryDelegate(this.prisma).count({
-        where: { tenantId, isDeleted: false },
-      }),
-      getUserMemoryDelegate(this.prisma).count({
-        where: { tenantId, isDeleted: true },
-      }),
-      this.prisma.$queryRaw<Array<{ category: string; count: bigint }>>`
-        SELECT category, COUNT(*) as count
-        FROM user_memories
-        WHERE tenant_id = ${tenantId}::uuid AND is_deleted = false
-        GROUP BY category
-        ORDER BY count DESC
-      `,
-      this.prisma.$queryRaw<Array<{ user_id: string; count: bigint }>>`
-        SELECT user_id, COUNT(*) as count
-        FROM user_memories
-        WHERE tenant_id = ${tenantId}::uuid AND is_deleted = false
-        GROUP BY user_id
-        ORDER BY count DESC
-        LIMIT 20
-      `,
+      this.userMemoryRepository.countActiveMemories(tenantId),
+      this.userMemoryRepository.countDeletedMemories(tenantId),
+      this.userMemoryRepository.fetchStatsByCategory(tenantId),
+      this.userMemoryRepository.fetchStatsByUser(tenantId),
     ])
 
     return {
@@ -178,29 +133,17 @@ export class UserMemoryService {
     }
   }
 
-  /* ── Governance: export ────────────────────────────── */
-
-  async exportMemories(
-    tenantId: string,
-    userId?: string
-  ): Promise<UserMemoryRecord[]> {
+  async exportMemories(tenantId: string, userId?: string): Promise<UserMemoryRecord[]> {
     const where: Record<string, unknown> = { tenantId, isDeleted: false }
     if (userId) {
       where['userId'] = userId
     }
 
-    return getUserMemoryDelegate(this.prisma).findMany({
-      where,
-      orderBy: { createdAt: 'asc' },
-    })
+    return this.userMemoryRepository.findManyForExport(where)
   }
 
-  /* ── Governance: retention policy ──────────────────── */
-
   async getRetentionPolicy(tenantId: string): Promise<RetentionPolicyRecord | null> {
-    return this.prisma.memoryRetentionPolicy.findUnique({
-      where: { tenantId },
-    })
+    return this.userMemoryRepository.findRetentionPolicy(tenantId)
   }
 
   async upsertRetentionPolicy(
@@ -208,22 +151,12 @@ export class UserMemoryService {
     data: { retentionDays: number; autoCleanup: boolean },
     createdBy: string
   ): Promise<RetentionPolicyRecord> {
-    return this.prisma.memoryRetentionPolicy.upsert({
-      where: { tenantId },
-      update: {
-        retentionDays: data.retentionDays,
-        autoCleanup: data.autoCleanup,
-      },
-      create: {
-        tenantId,
-        retentionDays: data.retentionDays,
-        autoCleanup: data.autoCleanup,
-        createdBy,
-      },
+    return this.userMemoryRepository.upsertRetentionPolicy(tenantId, {
+      retentionDays: data.retentionDays,
+      autoCleanup: data.autoCleanup,
+      createdBy,
     })
   }
-
-  /* ── Governance: cleanup expired memories ──────────── */
 
   async cleanupExpiredMemories(tenantId: string): Promise<number> {
     const policy = await this.getRetentionPolicy(tenantId)
@@ -234,37 +167,27 @@ export class UserMemoryService {
     const cutoffDate = new Date()
     cutoffDate.setDate(cutoffDate.getDate() - policy.retentionDays)
 
-    const result = await getUserMemoryDelegate(this.prisma).updateMany({
-      where: {
-        tenantId,
-        isDeleted: false,
-        updatedAt: { lt: cutoffDate },
-      },
-      data: { isDeleted: true },
-    })
+    const result = await this.userMemoryRepository.softDeleteExpiredMemories(tenantId, cutoffDate)
 
     if (result.count > 0) {
-      await this.prisma.memoryRetentionPolicy.update({
-        where: { tenantId },
-        data: {
-          lastCleanupAt: new Date(),
-          lastCleanupCount: result.count,
-        },
-      })
-      this.logger.log(`Retention cleanup: soft-deleted ${String(result.count)} memories for tenant ${tenantId}`)
+      await this.userMemoryRepository.updateRetentionPolicyCleanupTimestamp(tenantId, result.count)
+      this.logger.log(
+        `Retention cleanup: soft-deleted ${String(result.count)} memories for tenant ${tenantId}`
+      )
     }
 
     return result.count
   }
 
-  /* ── Governance: admin delete by user ──────────────── */
-
   async adminDeleteUserMemories(tenantId: string, userId: string): Promise<number> {
-    const result = await getUserMemoryDelegate(this.prisma).updateMany({
-      where: { tenantId, userId, isDeleted: false },
-      data: { isDeleted: true },
+    const result = await this.userMemoryRepository.softDeleteManyMemories({
+      tenantId,
+      userId,
+      isDeleted: false,
     })
-    this.logger.log(`Admin erased ${String(result.count)} memories for user ${userId} in tenant ${tenantId}`)
+    this.logger.log(
+      `Admin erased ${String(result.count)} memories for user ${userId} in tenant ${tenantId}`
+    )
     return result.count
   }
 
@@ -283,9 +206,7 @@ export class UserMemoryService {
     userId: string,
     memoryId: string
   ): Promise<UserMemoryRecord> {
-    const memory = await getUserMemoryDelegate(this.prisma).findUnique({
-      where: { id: memoryId },
-    })
+    const memory = await this.userMemoryRepository.findMemoryById(memoryId)
 
     if (!memory || memory.isDeleted) {
       throw new BusinessException(404, 'Memory not found', 'errors.memory.notFound')

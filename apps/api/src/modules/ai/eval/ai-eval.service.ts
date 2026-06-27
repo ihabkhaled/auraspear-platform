@@ -1,64 +1,51 @@
 import { Injectable, Logger } from '@nestjs/common'
+import { AiEvalRepository } from './ai-eval.repository'
 import { BusinessException } from '../../../common/exceptions/business.exception'
-import { PrismaService } from '../../../prisma/prisma.service'
+import type {
+  AiEvalRunWithSuiteName,
+  AiEvalStatsResponse,
+  AiEvalSuiteWithRunCount,
+} from './ai-eval.types'
+import type { AiEvalRun, AiEvalSuite } from '@prisma/client'
 
 @Injectable()
 export class AiEvalService {
   private readonly logger = new Logger(AiEvalService.name)
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly aiEvalRepository: AiEvalRepository) {}
 
-  async listSuites(tenantId: string) {
-    return this.prisma.aiEvalSuite.findMany({
-      where: { tenantId },
-      orderBy: { createdAt: 'desc' },
-      include: { _count: { select: { runs: true } } },
-    })
+  async listSuites(tenantId: string): Promise<AiEvalSuiteWithRunCount[]> {
+    return this.aiEvalRepository.findManySuites(tenantId)
   }
 
   async createSuite(
     tenantId: string,
     data: { name: string; description?: string; datasetJson: unknown },
     createdBy: string
-  ) {
-    return this.prisma.aiEvalSuite.create({
-      data: {
-        tenantId,
-        name: data.name,
-        description: data.description ?? null,
-        datasetJson: data.datasetJson as object,
-        createdBy,
-      },
+  ): Promise<AiEvalSuite> {
+    return this.aiEvalRepository.createSuite(tenantId, {
+      name: data.name,
+      description: data.description ?? null,
+      datasetJson: data.datasetJson as object,
+      createdBy,
     })
   }
 
-  async deleteSuite(tenantId: string, id: string) {
-    const suite = await this.prisma.aiEvalSuite.findFirst({
-      where: { id, tenantId },
-    })
+  async deleteSuite(tenantId: string, id: string): Promise<{ success: boolean }> {
+    const suite = await this.aiEvalRepository.findSuiteByIdAndTenant(tenantId, id)
     if (!suite) {
       throw new BusinessException(404, 'Suite not found', 'errors.aiEval.suiteNotFound')
     }
-    await this.prisma.aiEvalSuite.delete({ where: { id } })
+    await this.aiEvalRepository.deleteSuiteById(tenantId, id)
     return { success: true }
   }
 
-  async listRuns(tenantId: string, suiteId?: string) {
-    return this.prisma.aiEvalRun.findMany({
-      where: {
-        tenantId,
-        ...(suiteId ? { suiteId } : {}),
-      },
-      orderBy: { createdAt: 'desc' },
-      include: { suite: { select: { name: true } } },
-    })
+  async listRuns(tenantId: string, suiteId?: string): Promise<AiEvalRunWithSuiteName[]> {
+    return this.aiEvalRepository.findManyRuns(tenantId, suiteId)
   }
 
-  async getRunDetail(tenantId: string, id: string) {
-    const run = await this.prisma.aiEvalRun.findFirst({
-      where: { id, tenantId },
-      include: { suite: { select: { name: true } } },
-    })
+  async getRunDetail(tenantId: string, id: string): Promise<AiEvalRunWithSuiteName> {
+    const run = await this.aiEvalRepository.findRunByIdAndTenant(tenantId, id)
     if (!run) {
       throw new BusinessException(404, 'Run not found', 'errors.aiEval.runNotFound')
     }
@@ -69,42 +56,28 @@ export class AiEvalService {
     tenantId: string,
     data: { suiteId: string; provider: string; model: string },
     createdBy: string
-  ) {
-    const suite = await this.prisma.aiEvalSuite.findFirst({
-      where: { id: data.suiteId, tenantId },
-    })
+  ): Promise<AiEvalRun> {
+    const suite = await this.aiEvalRepository.findSuiteByIdAndTenant(tenantId, data.suiteId)
     if (!suite) {
       throw new BusinessException(404, 'Suite not found', 'errors.aiEval.suiteNotFound')
     }
-
     const datasetArray = Array.isArray(suite.datasetJson) ? suite.datasetJson : []
-
-    return this.prisma.aiEvalRun.create({
-      data: {
-        tenantId,
-        suiteId: data.suiteId,
-        provider: data.provider,
-        model: data.model,
-        status: 'pending',
-        totalCases: datasetArray.length,
-        createdBy,
-      },
+    return this.aiEvalRepository.createRun(tenantId, {
+      suiteId: data.suiteId,
+      provider: data.provider,
+      model: data.model,
+      status: 'pending',
+      totalCases: datasetArray.length,
+      createdBy,
     })
   }
 
-  async getStats(tenantId: string) {
+  async getStats(tenantId: string): Promise<AiEvalStatsResponse> {
     const [totalSuites, totalRuns, avgScoreResult, statusCounts] = await Promise.all([
-      this.prisma.aiEvalSuite.count({ where: { tenantId } }),
-      this.prisma.aiEvalRun.count({ where: { tenantId } }),
-      this.prisma.aiEvalRun.aggregate({
-        where: { tenantId, avgScore: { not: null } },
-        _avg: { avgScore: true },
-      }),
-      this.prisma.aiEvalRun.groupBy({
-        by: ['status'],
-        where: { tenantId },
-        _count: { id: true },
-      }),
+      this.aiEvalRepository.countSuites(tenantId),
+      this.aiEvalRepository.countRuns(tenantId),
+      this.aiEvalRepository.aggregateAvgScore(tenantId),
+      this.aiEvalRepository.groupRunsByStatus(tenantId),
     ])
 
     const statusMap: Record<string, number> = {}

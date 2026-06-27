@@ -64,6 +64,22 @@ export interface MemoryStatsResponse {
   uniqueUsers: number
 }
 
+export interface MemoryCategoryRow {
+  category: string
+  count: bigint
+}
+
+export interface MemoryUserRow {
+  user_id: string
+  count: bigint
+}
+
+export interface ListMemoriesOptions {
+  category?: string
+  search?: string
+  userId?: string
+}
+
 export interface RetentionPolicyRecord {
   id: string
   tenantId: string

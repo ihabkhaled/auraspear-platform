@@ -6,6 +6,7 @@ import { RagObservabilityController } from './rag-observability.controller'
 import { RagObservabilityRepository } from './rag-observability.repository'
 import { RagObservabilityService } from './rag-observability.service'
 import { UserMemoryController } from './user-memory.controller'
+import { UserMemoryRepository } from './user-memory.repository'
 import { UserMemoryService } from './user-memory.service'
 import { PrismaModule } from '../../../prisma/prisma.module'
 import { ConnectorsModule } from '../../connectors/connectors.module'
@@ -21,6 +22,7 @@ import { AiChatModule } from '../chat/ai-chat.module'
     MemoryRetrievalService,
     RagObservabilityRepository,
     RagObservabilityService,
+    UserMemoryRepository,
     UserMemoryService,
   ],
   exports: [
