@@ -87,6 +87,9 @@ export default tseslint.config(
       '@typescript-eslint/prefer-nullish-coalescing': 'warn',
       // Prefer optional chaining
       '@typescript-eslint/prefer-optional-chain': 'warn',
+      // Enforce the documented zero-exception @ts-ignore/@ts-expect-error ban
+      // explicitly rather than relying on the strict preset (audit ES-05).
+      '@typescript-eslint/ban-ts-comment': 'error',
 
       // ═══════════════════════════════════════════════════════════════
       // GENERAL CODE QUALITY
@@ -143,6 +146,14 @@ export default tseslint.config(
       'prefer-object-spread': 'error',
       // Cyclomatic complexity — max 15 branches per function
       complexity: ['warn', { max: 15 }],
+      // ── §11.2 size/nesting budgets (STAGED: warn-only) ──
+      // Closes audit ES-04. Surfaces god files (e.g. ai.service.ts 1612,
+      // cases.service.ts 1546) in lint without breaking the advisory gate.
+      // Ratchet to 'error' per module as files are split (see
+      // docs/audit/eslint-hardening-audit.md + skills/backend/split-god-service.md).
+      'max-lines': ['warn', { max: 500, skipBlankLines: true, skipComments: true }],
+      'max-depth': ['warn', 4],
+      'max-nested-callbacks': ['warn', 4],
       // NEVER use string literal union types — define an enum instead
       'no-restricted-syntax': [
         'error',
@@ -376,8 +387,7 @@ export default tseslint.config(
         // ── no inline enums ──
         {
           selector: 'TSEnumDeclaration',
-          message:
-            'Do not declare enums inline. Move to <module>.enums.ts or src/common/enums/.',
+          message: 'Do not declare enums inline. Move to <module>.enums.ts or src/common/enums/.',
         },
         // ── no inline constants (top-level const outside class) ──
         {
@@ -496,8 +506,7 @@ export default tseslint.config(
         },
         {
           selector: 'TSEnumDeclaration',
-          message:
-            'Do not declare enums inline. Move to <module>.enums.ts or src/common/enums/.',
+          message: 'Do not declare enums inline. Move to <module>.enums.ts or src/common/enums/.',
         },
         {
           selector: 'Program > VariableDeclaration[kind="const"]',
@@ -551,8 +560,7 @@ export default tseslint.config(
         },
         {
           selector: 'TSEnumDeclaration',
-          message:
-            'Do not declare enums inline. Move to <module>.enums.ts or src/common/enums/.',
+          message: 'Do not declare enums inline. Move to <module>.enums.ts or src/common/enums/.',
         },
         {
           selector: 'Program > VariableDeclaration[kind="const"]',
@@ -577,11 +585,23 @@ export default tseslint.config(
         },
         {
           selector: 'ThrowStatement',
-          message:
-            'Controllers must not throw directly. Delegate to the service layer.',
+          message: 'Controllers must not throw directly. Delegate to the service layer.',
         },
       ],
     },
+  },
+
+  // ── Declaration/data files — exempt from the max-lines budget ─────────────
+  // Constants, enums, DTOs and permission/definition data are declarations, not
+  // logic; their length is not a complexity smell.
+  {
+    files: [
+      'src/**/*.constants.ts',
+      'src/**/constants/**/*.ts',
+      'src/**/*.enums.ts',
+      'src/**/dto/**/*.ts',
+    ],
+    rules: { 'max-lines': 'off' },
   },
 
   // ── Test files — relax strict rules ────────────────────────────────────────
@@ -594,6 +614,9 @@ export default tseslint.config(
       '@typescript-eslint/no-floating-promises': 'off',
       '@typescript-eslint/explicit-function-return-type': 'off',
       'no-await-in-loop': 'off',
+      'max-lines': 'off',
+      'max-depth': 'off',
+      'max-nested-callbacks': 'off',
       'unicorn/consistent-function-scoping': 'off',
       'unicorn/no-useless-undefined': 'off',
       'security/detect-object-injection': 'off',

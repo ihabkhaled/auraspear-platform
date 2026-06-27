@@ -15,10 +15,12 @@ export interface PromptTemplate {
 export type PromptVariables = Readonly<Record<string, string | number>>
 
 export function renderPrompt(prompt: PromptTemplate, variables: PromptVariables): string {
+  // Map lookup (vs computed member access) sidesteps prototype-pollution reads
+  // and the object-injection sink, and only sees own enumerable keys — so
+  // inherited props like `toString` are never interpolated.
+  const values = new Map<string, string | number>(Object.entries(variables))
   return prompt.template.replace(/\{\{\s*([A-Za-z0-9_]+)\s*\}\}/g, (match, name: string) => {
-    const value = Object.prototype.hasOwnProperty.call(variables, name)
-      ? variables[name as keyof PromptVariables]
-      : undefined
+    const value = values.get(name)
     return value === undefined ? match : String(value)
   })
 }

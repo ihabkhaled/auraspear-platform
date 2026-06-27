@@ -2,21 +2,31 @@
   "name": "@auraspear/config",
   "version": "1.0.0",
   "private": true,
-  "description": "Shared build/tooling presets (TypeScript, Prettier, ESLint, Tailwind) for the AuraSpear platform.",
+  "description": "Shared build/tooling presets (TypeScript, Prettier, ESLint) for the AuraSpear platform.",
   "type": "module",
   "exports": {
     "./tsconfig/base.json": "./tsconfig/base.json",
-    "./prettier": "./prettier/index.mjs"
+    "./prettier": "./prettier/index.mjs",
+    "./eslint/base.mjs": "./eslint/base.mjs"
   },
   "files": [
     "tsconfig",
     "prettier",
-    "eslint",
-    "tailwind"
+    "eslint"
   ],
   "scripts": {
     "typecheck": "echo \"(config) presets only — nothing to typecheck\"",
     "lint": "echo \"(config) presets only\"",
     "lint:strict": "echo \"(config) presets only\""
+  },
+  "peerDependencies": {
+    "eslint": ">=9"
+  },
+  "dependencies": {
+    "@eslint/js": "^9.39.3",
+    "eslint-plugin-import-x": "^4.16.1",
+    "eslint-plugin-security": "^4.0.0",
+    "eslint-plugin-unicorn": "^63.0.0",
+    "typescript-eslint": "^8.56.1"
   }
 }

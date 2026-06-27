@@ -22,7 +22,12 @@
     "typecheck": "tsc --noEmit --pretty",
     "typecheck:ci": "tsc --noEmit --pretty",
     "typecheck:fast": "tsgo -p tsconfig.json --noEmit --pretty",
-    "lint": "echo \"(shared) no lint configured yet\"",
-    "lint:strict": "echo \"(shared) no lint configured yet\""
+    "lint": "eslint .",
+    "lint:strict": "eslint . --max-warnings 0"
+  },
+  "devDependencies": {
+    "@auraspear/config": "workspace:*",
+    "eslint": "^9.39.3",
+    "typescript": "^5.9.3"
   }
 }

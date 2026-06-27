@@ -59,7 +59,11 @@ const RULES: readonly RedactionRule[] = [
   },
   {
     kind: RedactionKind.IPV4,
-    pattern: /\b(?:(?:25[0-5]|2[0-4]\d|1?\d?\d)\.){3}(?:25[0-5]|2[0-4]\d|1?\d?\d)\b/g,
+    // Fully-expanded dotted-quad (no nested quantifiers → star-height 1 →
+    // provably linear / ReDoS-safe, passes security/detect-unsafe-regex). For
+    // redaction we deliberately over-match (e.g. 999.x) rather than risk
+    // leaking a real address; range validation is not the goal here.
+    pattern: /\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b/g,
     replacement: '[REDACTED:ipv4]',
   },
 ]

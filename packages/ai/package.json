@@ -2,7 +2,7 @@
   "name": "@auraspear/ai",
   "version": "1.0.0",
   "private": true,
-  "description": "Shared AI building blocks for the AuraSpear platform: output contracts, redaction, provider routing, safety/approval policy, and an evaluation harness. Dependency-free so both web and api can consume it.",
+  "description": "Shared AI building blocks for the AuraSpear platform: output contracts, redaction, provider routing, safety/approval policy, and an evaluation harness. Runtime dependency-free so both web and api can consume it.",
   "type": "module",
   "exports": {
     ".": {
@@ -22,7 +22,16 @@
     "typecheck": "tsc --noEmit --pretty",
     "typecheck:ci": "tsc --noEmit --pretty",
     "typecheck:fast": "tsgo -p tsconfig.json --noEmit --pretty",
-    "lint": "echo \"(ai) lint via consumers\"",
-    "lint:strict": "echo \"(ai) lint via consumers\""
+    "lint": "eslint .",
+    "lint:strict": "eslint . --max-warnings 0",
+    "test": "vitest run",
+    "test:cov": "vitest run --coverage"
+  },
+  "devDependencies": {
+    "@auraspear/config": "workspace:*",
+    "@vitest/coverage-v8": "^3.2.6",
+    "eslint": "^9.39.3",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.6"
   }
 }

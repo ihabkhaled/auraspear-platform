@@ -17,8 +17,7 @@ const banStringLiteralUnions = {
 
 const banInlineEnum = {
   selector: 'TSEnumDeclaration',
-  message:
-    'Enums must be defined in src/enums/. Import from @/enums instead (Rule #13).',
+  message: 'Enums must be defined in src/enums/. Import from @/enums instead (Rule #13).',
 }
 
 const banInlineInterface = {
@@ -34,7 +33,8 @@ const banInlineTypeAlias = {
 }
 
 const banInlineConst = {
-  selector: 'Program > VariableDeclaration[kind="const"] > VariableDeclarator[id.name=/^[A-Z][A-Z0-9_]+$/]',
+  selector:
+    'Program > VariableDeclaration[kind="const"] > VariableDeclarator[id.name=/^[A-Z][A-Z0-9_]+$/]',
   message:
     'Module-level constants (SCREAMING_CASE) must be defined in src/lib/constants/<domain>.ts (Rule #13).',
 }
@@ -58,13 +58,15 @@ const banInlineUtilFunction = {
 }
 
 const banInlineArrowUtil = {
-  selector: 'Program > VariableDeclaration[kind="const"] > VariableDeclarator[id.name=/^[a-z]/] > ArrowFunctionExpression',
+  selector:
+    'Program > VariableDeclaration[kind="const"] > VariableDeclarator[id.name=/^[a-z]/] > ArrowFunctionExpression',
   message:
     'Arrow-function utilities/helpers must not be defined in .tsx files. Move to src/lib/<domain>.utils.ts or src/hooks/ (Rule #60).',
 }
 
 const banLiteralStatusCssReturn = {
-  selector: 'ReturnStatement > Literal[value=/^(text-status-|bg-status-|border-status-|text-muted-foreground|bg-muted|border-border)/]',
+  selector:
+    'ReturnStatement > Literal[value=/^(text-status-|bg-status-|border-status-|text-muted-foreground|bg-muted|border-border)/]',
   message:
     'Do not return literal CSS class strings. Use StatusTextClass, StatusBgClass, or StatusBorderClass enums from @/enums instead (Rule #40).',
 }
@@ -72,8 +74,19 @@ const banLiteralStatusCssReturn = {
 // Selectors by scope — each later block must include all applicable selectors
 const baseSelectors = [banStringLiteralUnions]
 const defaultSelectors = [...baseSelectors, banInlineEnum]
-const typeAwareSelectors = [...defaultSelectors, banInlineInterface, banInlineTypeAlias, banInlineConst, banInlineUtilFunction]
-const componentSelectors = [...typeAwareSelectors, banInlineHook, banInlineHookArrow, banInlineArrowUtil]
+const typeAwareSelectors = [
+  ...defaultSelectors,
+  banInlineInterface,
+  banInlineTypeAlias,
+  banInlineConst,
+  banInlineUtilFunction,
+]
+const componentSelectors = [
+  ...typeAwareSelectors,
+  banInlineHook,
+  banInlineHookArrow,
+  banInlineArrowUtil,
+]
 
 const eslintConfig = defineConfig([
   // ── Next.js presets (includes @typescript-eslint, react, react-hooks, jsx-a11y) ──
@@ -145,6 +158,23 @@ const eslintConfig = defineConfig([
       '@typescript-eslint/no-loop-func': 'error',
       // No require() imports — use ES modules
       '@typescript-eslint/no-require-imports': 'error',
+      // Enforce the documented zero-exception @ts-ignore/@ts-expect-error ban
+      // (apps/web/CLAUDE.md rules #2/#12) — was not machine-enforced (audit ES-05).
+      '@typescript-eslint/ban-ts-comment': 'error',
+
+      // ═══════════════════════════════════════════════════════════════
+      // §11.2 SIZE / COMPLEXITY BUDGETS (STAGED: warn-only) — audit ES-04
+      // The frontend previously had no complexity/length/depth budget at all.
+      // Warn-only so the advisory lint gate stays green; surfaces god hooks
+      // (e.g. useAiConfigPage 648) for decomposition. Ratchet to 'error' as
+      // files are split (skills/frontend/split-large-react-component.md).
+      // ═══════════════════════════════════════════════════════════════
+      complexity: ['warn', { max: 12 }],
+      'max-lines': ['warn', { max: 500, skipBlankLines: true, skipComments: true }],
+      'max-lines-per-function': ['warn', { max: 150, skipBlankLines: true, skipComments: true }],
+      'max-depth': ['warn', 4],
+      'max-params': ['warn', 5],
+      'max-nested-callbacks': ['warn', 4],
 
       // Separation-of-concerns: ban string literal unions + enums outside src/enums/
       // (Rules #13, #17 — overridden per-scope in file-specific blocks below)
@@ -439,7 +469,12 @@ const eslintConfig = defineConfig([
 
   // Hook, service, API route files — ban inline interfaces, types, enums
   {
-    files: ['src/hooks/**/*.ts', 'src/services/**/*.ts', 'src/app/api/**/*.ts', 'src/stores/**/*.ts'],
+    files: [
+      'src/hooks/**/*.ts',
+      'src/services/**/*.ts',
+      'src/app/api/**/*.ts',
+      'src/stores/**/*.ts',
+    ],
     rules: {
       'no-restricted-syntax': ['error', ...typeAwareSelectors],
     },
@@ -470,14 +505,44 @@ const eslintConfig = defineConfig([
     },
   },
 
+  // ── Barrels & declaration files — exempt from the max-lines budget ─────────
+  // Re-export barrels and type/enum/constant aggregation files are declarations,
+  // not logic; their length is by design.
+  {
+    files: [
+      '**/index.ts',
+      '**/index.tsx',
+      'src/types/**/*.ts',
+      'src/enums/**/*.ts',
+      'src/lib/constants/**/*.ts',
+    ],
+    rules: { 'max-lines': 'off' },
+  },
+
+  // ── shadcn/ui generated components — exempt from size/complexity budgets ────
+  {
+    files: ['src/components/ui/**/*.tsx'],
+    rules: { 'max-lines': 'off', 'max-lines-per-function': 'off', complexity: 'off' },
+  },
+
   // ── Test files — relax strict rules ────────────────────────────────────────
   {
-    files: ['src/tests/**/*.{ts,tsx}', '**/*.test.{ts,tsx}', '**/*.spec.{ts,tsx}'],
+    files: [
+      'src/tests/**/*.{ts,tsx}',
+      'test/**/*.{ts,tsx}',
+      '**/*.test.{ts,tsx}',
+      '**/*.spec.{ts,tsx}',
+    ],
     rules: {
       'no-console': 'off',
       '@typescript-eslint/no-explicit-any': 'off',
       '@typescript-eslint/no-non-null-assertion': 'off',
       'no-await-in-loop': 'off',
+      'max-lines': 'off',
+      'max-lines-per-function': 'off',
+      'max-depth': 'off',
+      'max-nested-callbacks': 'off',
+      complexity: 'off',
       'unicorn/consistent-function-scoping': 'off',
       'unicorn/no-useless-undefined': 'off',
       'react/no-danger': 'off',
