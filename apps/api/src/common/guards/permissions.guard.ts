@@ -68,8 +68,10 @@ export class PermissionsGuard implements CanActivate {
     if (allowCaseOwner) {
       const caseId = request.params?.id
       if (caseId) {
-        const caseRecord = await this.prisma.case.findUnique({
-          where: { id: caseId },
+        // SEC-05: scope the case lookup by tenantId so the guard never reads a
+        // row outside the caller's tenant (findFirst, not findUnique-by-id).
+        const caseRecord = await this.prisma.case.findFirst({
+          where: { id: caseId, tenantId: user.tenantId },
           select: { ownerUserId: true },
         })
         if (caseRecord?.ownerUserId === user.sub) {
