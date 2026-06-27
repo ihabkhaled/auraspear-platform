@@ -1,6 +1,6 @@
 import { describe, test, expect } from 'vitest'
 import { UserRole } from '@/enums'
-import { getStatusDotClass, getRoleBadgeClass } from '@/lib/admin-utils'
+import { getStatusDotClass, getRoleBadgeClass } from '@/lib/admin.utils'
 
 describe('getStatusDotClass (admin)', () => {
   test('active user returns success', () => {

@@ -2,14 +2,9 @@
 
 import { LogOut, MonitorSmartphone, ShieldAlert, Users } from 'lucide-react'
 import { DataTable } from '@/components/common'
-import {
-  Avatar,
-  AvatarFallback,
-  Badge,
-  Button,
-} from '@/components/ui'
+import { Avatar, AvatarFallback, Badge, Button } from '@/components/ui'
 import { SortOrder, type UserRole } from '@/enums'
-import { getRoleBadgeClass } from '@/lib/admin-utils'
+import { getRoleBadgeClass } from '@/lib/admin.utils'
 import { getInitials } from '@/lib/case.utils'
 import { USERS_CONTROL_OS_LABEL_KEYS } from '@/lib/constants/users-control'
 import {

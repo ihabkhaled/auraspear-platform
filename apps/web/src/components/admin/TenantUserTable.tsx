@@ -12,16 +12,10 @@ import {
   Users,
 } from 'lucide-react'
 import { DataTable } from '@/components/common'
-import {
-  Avatar,
-  AvatarFallback,
-  AvatarImage,
-  Badge,
-  Button,
-} from '@/components/ui'
+import { Avatar, AvatarFallback, AvatarImage, Badge, Button } from '@/components/ui'
 import { UserRole, UserStatus } from '@/enums'
 import { useTenantUserTable } from '@/hooks'
-import { getStatusDotClass, getRoleBadgeClass } from '@/lib/admin-utils'
+import { getRoleBadgeClass, getStatusDotClass } from '@/lib/admin.utils'
 import { getInitials } from '@/lib/case.utils'
 import { ROLE_HIERARCHY } from '@/lib/roles'
 import { cn, formatRelativeTime } from '@/lib/utils'

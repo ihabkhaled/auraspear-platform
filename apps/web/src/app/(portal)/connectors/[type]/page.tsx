@@ -25,7 +25,7 @@ import {
 } from '@/components/ui'
 import { ConnectorAuthType, WorkspaceTab } from '@/enums'
 import { useConnectorWorkspacePage } from '@/hooks'
-import { mapConfigForBackend } from '@/lib/connector-utils'
+import { mapConfigForBackend } from '@/lib/connector.utils'
 import { isSyncableConnector } from '@/lib/constants/connectors.constants'
 import type { ConnectorDetailPageProps } from '@/types'
 

@@ -12,7 +12,7 @@ import {
 } from '@/components/ui'
 import { WorkspaceTab } from '@/enums'
 import { useConnectorCard } from '@/hooks'
-import { deriveConnectorStatus } from '@/lib/connectors.utils'
+import { deriveConnectorStatus } from '@/lib/connector.utils'
 import { CONNECTOR_ICONS } from '@/lib/constants/connectors.constants'
 import { formatRelativeTime } from '@/lib/utils'
 import type { ConnectorCardProps } from '@/types'

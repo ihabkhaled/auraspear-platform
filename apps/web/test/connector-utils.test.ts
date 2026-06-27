@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { ConnectorAuthType, ConnectorType } from '@/enums'
-import { recordToFormValues } from '@/lib/connector-utils'
+import { recordToFormValues } from '@/lib/connector.utils'
 import type { ConnectorRecord } from '@/types'
 
 // ─── Helper to create a minimal ConnectorRecord ─────────────────

@@ -1,6 +1,6 @@
 import { useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { deriveConnectorStatus } from '@/lib/connectors.utils'
+import { deriveConnectorStatus } from '@/lib/connector.utils'
 import type { LlmConnectorCardProps } from '@/types'
 
 export function useLlmConnectorCard({ connector }: Pick<LlmConnectorCardProps, 'connector'>) {

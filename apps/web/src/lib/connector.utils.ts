@@ -1,4 +1,4 @@
-import { ConnectorAuthType, ConnectorType, LlmMaxTokensParameter } from '@/enums'
+import { ConnectorAuthType, ConnectorStatus, ConnectorType, LlmMaxTokensParameter } from '@/enums'
 import type { ConnectorFormValues } from '@/lib/validation/connectors.schema'
 import type { ConnectorRecord } from '@/types'
 
@@ -121,4 +121,10 @@ export function mapConfigForBackend(
   }
 
   return config
+}
+
+export function deriveConnectorStatus(lastTestOk: boolean | null): ConnectorStatus {
+  if (lastTestOk === true) return ConnectorStatus.CONNECTED
+  if (lastTestOk === false) return ConnectorStatus.DISCONNECTED
+  return ConnectorStatus.NOT_CONFIGURED
 }
